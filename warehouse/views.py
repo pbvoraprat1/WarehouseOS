@@ -127,3 +127,11 @@ class LowStockAlertAPIView(APIView):
             "low_stock_products": low_stock_data,
             "recent_transactions": transactions_data,
         },  status=status.HTTP_200_OK)
+
+class WarehouseListAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        warehouses = Warehouse.objects.all()
+        data = [{"id": w.id, "name": w.name} for w in warehouses]
+        return Response(data)

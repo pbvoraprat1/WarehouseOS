@@ -41,8 +41,3 @@ def perform_stock_transaction(product, warehouse, quantity, transaction_type, us
             reference_document=reference_document
         )
         return transaction_record
-
-    
-
-
-    
