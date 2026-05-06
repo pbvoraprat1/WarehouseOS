@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
-import { AlertTriangle, XCircle, TrendingDown, ChevronDown } from "lucide-react";
+import { useState } from "react";
+import { AlertTriangle, XCircle, TrendingDown, ChevronDown, Loader2 } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
 
 // ==========================================
 // 1. Interfaces (กำหนดหน้าตาข้อมูลสำหรับ TypeScript)
@@ -32,102 +33,63 @@ interface DashboardData {
   }>;
 }
 
+const apiUrl = import.meta.env.VITE_API_BASE_URL;
+const username = import.meta.env.VITE_API_USERNAME;
+const password = import.meta.env.VITE_API_PASSWORD;
+const token = btoa(`${username}:${password}`);
+
 export default function Dashboard() {
   // ==========================================
   // 2. States (ตัวแปรเก็บสถานะต่างๆ)
   // ==========================================
   
-  // States สำหรับรายชื่อคลังและ Dropdown
-  const [warehouseList, setWarehouseList] = useState<WarehouseItem[]>([]);
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<string>(""); 
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
-  // States สำหรับข้อมูลหน้า Dashboard
-  const [dbData, setDbData] = useState<DashboardData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // ==========================================
+  // 3. React Query สำหรับดึงข้อมูล
+  // ==========================================
 
-  // ==========================================
-  // 3. ดึงค่าตัวแปรจากไฟล์ .env (Security Best Practice)
-  // ==========================================
-  const apiUrl = import.meta.env.VITE_API_BASE_URL;
-  const username = import.meta.env.VITE_API_USERNAME;
-  const password = import.meta.env.VITE_API_PASSWORD;
-  
-  // สร้าง Token สำหรับ Basic Auth แบบ Dynamic
-  const token = btoa(`${username}:${password}`);
-
-  // ==========================================
-  // 4. Effect 1: ดึงรายชื่อคลังสินค้าทั้งหมด (ทำครั้งเดียวตอนเปิดหน้า)
-  // ==========================================
-  useEffect(() => {
-    const fetchWarehouses = async () => {
-      try {
-        // ใช้ apiUrl จาก .env แทนการพิมพ์ http://... โต้งๆ
-        const response = await fetch(`${apiUrl}/warehouse/list/`, {
-          method: 'GET',
-          headers: { 'Authorization': `Basic ${token}` }
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          setWarehouseList(data);
-          
-          // ถ้ามีคลังสินค้าในระบบ ให้เลือกคลังแรกเป็นค่าเริ่มต้นอัตโนมัติ
-          if (data.length > 0) {
-            setSelectedWarehouseId(data[0].id.toString());
-          } else {
-            setIsLoading(false); // ถ้าไม่มีคลังเลยให้หยุดโหลด
-          }
-        }
-      } catch (error) {
-        console.error("ดึงรายชื่อคลังสินค้าไม่สำเร็จ:", error);
-        setIsLoading(false);
+  // 3.1 ดึงรายชื่อคลังสินค้าทั้งหมด
+  const { data: warehouseList = [], isLoading: isLoadingWarehouses } = useQuery<WarehouseItem[]>({
+    queryKey: ['warehouses'],
+    queryFn: async () => {
+      const response = await fetch(`${apiUrl}/warehouse/list/`, {
+        headers: { 'Authorization': `Basic ${token}` }
+      });
+      if (!response.ok) throw new Error('ดึงข้อมูลรายชื่อคลังสินค้าไม่สำเร็จ');
+      const data = await response.json();
+      
+      // เลือกคลังแรกอัตโนมัติถ้ายังไม่ได้เลือก
+      if (data.length > 0 && !selectedWarehouseId) {
+        setSelectedWarehouseId(data[0].id.toString());
       }
-    };
+      return data;
+    }
+  });
 
-    fetchWarehouses();
-  }, []); // วงเล็บว่างแปลว่ารันแค่ครั้งเดียว
+  // 3.2 ดึงข้อมูล Dashboard เมื่อมีการเลือกคลังแล้ว
+  const { data: dbData, isLoading: isLoadingDashboard, isError } = useQuery<DashboardData>({
+    queryKey: ['dashboard', selectedWarehouseId],
+    queryFn: async () => {
+      const response = await fetch(`${apiUrl}/warehouse/dashboard/${selectedWarehouseId}/`, {
+        headers: { 'Authorization': `Basic ${token}` }
+      });
+      if (!response.ok) throw new Error('ดึงข้อมูล Dashboard ไม่สำเร็จ');
+      return response.json();
+    },
+    enabled: !!selectedWarehouseId // query จะรันก็ต่อเมื่อมีค่า selectedWarehouseId
+  });
 
-  // ==========================================
-  // 5. Effect 2: ดึงข้อมูล Dashboard (ทำทุกครั้งที่เปลี่ยนคลังสินค้า)
-  // ==========================================
-  useEffect(() => {
-    // ถ้ายังไม่มี ID คลัง (กำลังโหลด Effect 1 อยู่) ให้ข้ามไปก่อน
-    if (!selectedWarehouseId) return;
-
-    const fetchDashboardData = async () => {
-      setIsLoading(true);
-      try {
-        // ยิง API ไปยัง URL ที่ประกอบร่างจาก .env และ ID คลังที่เลือก
-        const response = await fetch(`${apiUrl}/warehouse/dashboard/${selectedWarehouseId}/`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Basic ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        if (!response.ok) throw new Error('ดึงข้อมูลไม่สำเร็จ');
-        
-        const result = await response.json();
-        setDbData(result);
-      } catch (error) {
-        console.error("เกิดข้อผิดพลาดในการดึงข้อมูล Dashboard:", error);
-        setDbData(null);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchDashboardData();
-  }, [selectedWarehouseId]); // ทำงานใหม่ทุกครั้งที่ ID คลังเปลี่ยน
+  const isLoading = isLoadingWarehouses || isLoadingDashboard;
 
   // ==========================================
-  // 6. การแสดงผลกรณี Loading หรือ Error
+  // 4. การแสดงผลกรณี Loading หรือ Error
   // ==========================================
   if (isLoading) {
     return (
-      <div className="flex h-[50vh] items-center justify-center text-muted-foreground animate-pulse">
+      <div className="flex h-[50vh] flex-col items-center justify-center text-muted-foreground gap-3">
+        <Loader2 className="h-6 w-6 animate-spin" />
         กำลังเชื่อมต่อและดึงข้อมูลจากระบบ...
       </div>
     );
@@ -137,7 +99,7 @@ export default function Dashboard() {
   const activeWarehouse = warehouseList.find(w => w.id.toString() === selectedWarehouseId);
   const dropdownDisplayLabel = activeWarehouse ? activeWarehouse.name : (dbData?.warehouse_name || "เลือกคลังสินค้า");
 
-  if (!dbData) {
+  if (!dbData || isError) {
     return (
       <div className="flex flex-col h-[50vh] items-center justify-center space-y-4">
         <div className="text-destructive font-semibold">ไม่พบข้อมูลคลังสินค้านี้ หรือเกิดข้อผิดพลาดในการเชื่อมต่อ</div>
@@ -146,7 +108,7 @@ export default function Dashboard() {
   }
 
   // ==========================================
-  // 7. การแสดงผล UI หลัก (Render)
+  // 5. การแสดงผล UI หลัก (Render)
   // ==========================================
   return (
     <div className="space-y-6">

@@ -1,18 +1,49 @@
 import { useState } from "react";
-import { Search, Plus, Pencil, Trash2 } from "lucide-react";
-import { products } from "@/data/mockData";
+import { Search, Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+
+interface ApiProduct {
+  id: string;
+  sku: string;
+  name: string;
+  category_name: string;
+  base_price: string;
+  reorder_level: number;
+  is_active: boolean;
+  total_stock: number;
+}
+
+const apiUrl = import.meta.env.VITE_API_BASE_URL;
+const username = import.meta.env.VITE_API_USERNAME;
+const password = import.meta.env.VITE_API_PASSWORD;
+const token = btoa(`${username}:${password}`);
 
 export default function Products() {
   const [search, setSearch] = useState("");
+
+  const { data: products = [], isLoading, isError } = useQuery<ApiProduct[]>({
+    queryKey: ['products'],
+    queryFn: async () => {
+      const response = await fetch(`${apiUrl}/warehouse/products/`, {
+        headers: {
+          'Authorization': `Basic ${token}`
+        }
+      });
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      return response.json();
+    }
+  });
 
   const filtered = products.filter(
     (p) =>
       p.name.toLowerCase().includes(search.toLowerCase()) ||
       p.sku.toLowerCase().includes(search.toLowerCase()) ||
-      p.category.toLowerCase().includes(search.toLowerCase())
+      (p.category_name || "").toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -53,32 +84,50 @@ export default function Products() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((p) => (
-              <tr key={p.id} className={cn("border-b border-border last:border-0 hover:bg-muted/30 transition-colors", p.currentStock === 0 && "bg-destructive/5")}>
-                <td className="px-5 py-3 font-mono text-xs text-muted-foreground">{p.sku}</td>
-                <td className="px-5 py-3 font-medium text-foreground">{p.name}</td>
-                <td className="px-5 py-3 text-muted-foreground">{p.category}</td>
-                <td className="px-5 py-3 text-foreground">${p.basePrice.toLocaleString()}</td>
-                <td className="px-5 py-3">
-                  <StatusBadge variant={p.currentStock === 0 ? "danger" : p.currentStock <= p.reorderLevel ? "warning" : "success"}>
-                    {p.currentStock}
-                  </StatusBadge>
-                </td>
-                <td className="px-5 py-3 text-muted-foreground">{p.reorderLevel}</td>
-                <td className="px-5 py-3">
-                  <div className="flex items-center gap-1">
-                    <button onClick={() => toast.info(`Edit ${p.name}`)} className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
-                      <Pencil className="h-3.5 w-3.5" />
-                    </button>
-                    <button onClick={() => toast.error(`Delete ${p.name}`)} className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors">
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
+            {isLoading ? (
+              <tr>
+                <td colSpan={7} className="px-5 py-10 text-center text-muted-foreground">
+                  <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
+                  Loading products...
                 </td>
               </tr>
-            ))}
-            {filtered.length === 0 && (
-              <tr><td colSpan={7} className="px-5 py-10 text-center text-muted-foreground">No products found.</td></tr>
+            ) : isError ? (
+              <tr>
+                <td colSpan={7} className="px-5 py-10 text-center text-destructive">
+                  Error loading products. Please try again later.
+                </td>
+              </tr>
+            ) : filtered.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-5 py-10 text-center text-muted-foreground">
+                  No products found.
+                </td>
+              </tr>
+            ) : (
+              filtered.map((p) => (
+                <tr key={p.id} className={cn("border-b border-border last:border-0 hover:bg-muted/30 transition-colors", p.total_stock === 0 && "bg-destructive/5")}>
+                  <td className="px-5 py-3 font-mono text-xs text-muted-foreground">{p.sku}</td>
+                  <td className="px-5 py-3 font-medium text-foreground">{p.name}</td>
+                  <td className="px-5 py-3 text-muted-foreground">{p.category_name}</td>
+                  <td className="px-5 py-3 text-foreground">${parseFloat(p.base_price).toLocaleString()}</td>
+                  <td className="px-5 py-3">
+                    <StatusBadge variant={p.total_stock === 0 ? "danger" : p.total_stock <= p.reorder_level ? "warning" : "success"}>
+                      {p.total_stock}
+                    </StatusBadge>
+                  </td>
+                  <td className="px-5 py-3 text-muted-foreground">{p.reorder_level}</td>
+                  <td className="px-5 py-3">
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => toast.info(`Edit ${p.name}`)} className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                      <button onClick={() => toast.error(`Delete ${p.name}`)} className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
             )}
           </tbody>
         </table>

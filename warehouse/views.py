@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.core.exceptions import ValidationError
 from .services import perform_stock_transaction
-from .serializers import StockBalanceSerializer, StockTransactionSerializer, StockmovementSerializer, ProductSerializer
+from .serializers import StockBalanceSerializer, StockTransactionSerializer, StockmovementSerializer, ProductSerializer, WarehouseSerializer
 from .models import Product, StockBalance, Warehouse, StockTransaction
 from rest_framework.permissions import IsAuthenticated
 
@@ -132,6 +132,6 @@ class WarehouseListAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        warehouses = Warehouse.objects.all()
-        data = [{"id": w.id, "name": w.name} for w in warehouses]
-        return Response(data)
+        warehouses = Warehouse.objects.filter(is_active=True)
+        serializer = WarehouseSerializer(warehouses, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)

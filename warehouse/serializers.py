@@ -3,9 +3,14 @@ from .models import Warehouse, StockBalance, StockTransaction, Product
 
 #API สำหรับจัดการคลังสินค้า
 class WarehouseSerializer(serializers.ModelSerializer):
+    total_products = serializers.SerializerMethodField()
+    
     class Meta:
         model = Warehouse
         fields = '__all__'
+        
+    def get_total_products(self, obj):
+        return obj.stock_balances.count()
         
 #API สำหรับแสดงยอดคงเหลือสินค้าในคลัง
 class StockBalanceSerializer(serializers.ModelSerializer):
@@ -34,7 +39,25 @@ class StockmovementSerializer(serializers.Serializer):
     reference_document = serializers.CharField(max_length=255, required=False, allow_blank=True)
 
 class ProductSerializer(serializers.ModelSerializer):
+    #API สำหรับแสดงข้อมูลสินค้า
+    category_name = serializers.CharField(source='category.name', read_only=True)
+    #สำหรับแสดงยอดคงเหลือรวมจากทุกคลัง
+    total_stock = serializers.SerializerMethodField()
+
     class Meta:
         model = Product
-        fields = '__all__'
-        
+        fields = [
+            'id', 
+            'sku', 
+            'name', 
+            'category_name', 
+            'base_price', 
+            'reorder_level', 
+            'is_active', 
+            'total_stock'
+        ]
+
+    def get_total_stock(self, obj):
+        from django.db.models import Sum
+        stock = obj.stock_balances.aggregate(total=Sum('quantity'))['total']
+        return stock if stock is not None else 0
