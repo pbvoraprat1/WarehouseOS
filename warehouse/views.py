@@ -110,8 +110,6 @@ class LowStockAlertAPIView(APIView):
         except Warehouse.DoesNotExist:
             return Response({"error": "ไม่พบคลังสินค้า"}, status=status.HTTP_404_NOT_FOUND)
         lowStockBalance = StockBalance.objects.filter(warehouse_id=warehouse_id, quantity__lte=F('product__reorder_level'))
-        if not lowStockBalance.exists():
-            return Response({"message": "ไม่มีสินค้าที่มีปริมาณต่ำกว่าระดับสั่งซื้อใหม่"}, status=status.HTTP_200_OK)
         out_of_stock = lowStockBalance.filter(quantity=0)
         near_out_of_stock = lowStockBalance.filter(quantity__gt=0)
         recent_transactions = StockTransaction.objects.filter(warehouse_id=warehouse_id).order_by('-timestamp')[:10]  # แสดงรายการเคลื่อนไหวล่าสุด 10 รายการ
