@@ -4,11 +4,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
-
-const apiUrl = import.meta.env.VITE_API_BASE_URL;
-const username = import.meta.env.VITE_API_USERNAME;
-const password = import.meta.env.VITE_API_PASSWORD;
-const token = btoa(`${username}:${password}`);
+import { getProducts } from "../lib/api";
 
 export default function Products() {
   const [search, setSearch] = useState("");
@@ -19,17 +15,7 @@ export default function Products() {
     isError,
   } = useQuery({
     queryKey: ["products"],
-    queryFn: async () => {
-      const response = await fetch(`${apiUrl}/warehouse/products/`, {
-        headers: {
-          Authorization: `Basic ${token}`,
-        },
-      });
-      if (!response.ok) {
-        throw new Error("Network response was not ok");
-      }
-      return response.json();
-    },
+    queryFn: getProducts,
   });
 
   const filtered = products.filter(
