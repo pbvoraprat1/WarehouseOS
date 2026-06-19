@@ -4,11 +4,8 @@ import { cn } from "@/lib/utils";
 import { StatusBadge } from "@/components/StatusBadge";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-
-const apiUrl = import.meta.env.VITE_API_BASE_URL;
-const username = import.meta.env.VITE_API_USERNAME;
-const password = import.meta.env.VITE_API_PASSWORD;
-const token = btoa(`${username}:${password}`);
+import api from "@/lib/axios";
+import { getProducts, getWarehouses } from "@/lib/api";
 
 export default function StockMovements() {
   const queryClient = useQueryClient();
@@ -23,50 +20,31 @@ export default function StockMovements() {
   // Fetch Products
   const { data: products = [] } = useQuery({
     queryKey: ["products"],
-    queryFn: async () => {
-      const response = await fetch(`${apiUrl}/warehouse/products/`, {
-        headers: { Authorization: `Basic ${token}` },
-      });
-      if (!response.ok) throw new Error("Network response was not ok");
-      return response.json();
-    },
+    queryFn: () => getProducts(),
   });
+
 
   // Fetch Warehouses
   const { data: warehouses = [] } = useQuery({
     queryKey: ["warehouses"],
-    queryFn: async () => {
-      const response = await fetch(`${apiUrl}/warehouse/list/`, {
-        headers: { Authorization: `Basic ${token}` },
-      });
-      if (!response.ok) throw new Error("Network response was not ok");
-      return response.json();
-    },
+    queryFn: () => getWarehouses(),
   });
 
   // Mutation for creating transaction
   const mutation = useMutation({
     mutationFn: async (data) => {
-      const response = await fetch(`${apiUrl}/warehouse/stock-movements/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Basic ${token}`,
-        },
-        body: JSON.stringify({
+      try {
+        const response = await api.post('/warehouse/stock-movements/', {
           product_id: data.productId,
           warehouse_id: data.warehouseId,
           transaction_type: data.type,
           quantity: parseInt(data.quantity),
           reference_document: data.reference || "",
-        }),
-      });
-
-      if (!response.ok) {
-        const errData = await response.json().catch(() => null);
-        throw new Error(errData?.error || "เกิดข้อผิดพลาดในการบันทึกข้อมูล");
+        });
+        return response.data;
+      } catch (error) {
+        throw new Error(error.response?.data?.error || "เกิดข้อผิดพลาดในการบันทึกข้อมูล");
       }
-      return response.json();
     },
     onSuccess: (data) => {
       toast.success(data.message || `Transaction recorded successfully`);
@@ -267,7 +245,7 @@ export default function StockMovements() {
                     selectedProduct.total_stock === 0
                       ? "danger"
                       : selectedProduct.total_stock <=
-                          selectedProduct.reorder_level
+                        selectedProduct.reorder_level
                         ? "warning"
                         : "success"
                   }
@@ -275,7 +253,7 @@ export default function StockMovements() {
                   {selectedProduct.total_stock === 0
                     ? "Out of Stock"
                     : selectedProduct.total_stock <=
-                        selectedProduct.reorder_level
+                      selectedProduct.reorder_level
                       ? "Low Stock"
                       : "In Stock"}
                 </StatusBadge>

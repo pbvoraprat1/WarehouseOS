@@ -15,7 +15,7 @@ export default function Products() {
     isError,
   } = useQuery({
     queryKey: ["products"],
-    queryFn: getProducts,
+    queryFn: () => getProducts(),
   });
 
   const filtered = products.filter(

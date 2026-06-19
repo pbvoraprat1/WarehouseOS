@@ -1,10 +1,7 @@
 import { MapPin, Package, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-
-const apiUrl = import.meta.env.VITE_API_BASE_URL;
-const username = import.meta.env.VITE_API_USERNAME;
-const password = import.meta.env.VITE_API_PASSWORD;
-const token = btoa(`${username}:${password}`);
+import { getWarehouses } from "@/lib/api";
+import api from "@/lib/axios";
 
 export default function Warehouses() {
   const {
@@ -13,13 +10,7 @@ export default function Warehouses() {
     isError,
   } = useQuery({
     queryKey: ["warehouses_detail"],
-    queryFn: async () => {
-      const response = await fetch(`${apiUrl}/warehouse/list/`, {
-        headers: { Authorization: `Basic ${token}` },
-      });
-      if (!response.ok) throw new Error("Network response was not ok");
-      return response.json();
-    },
+    queryFn: () => getWarehouses(),
   });
 
   return (

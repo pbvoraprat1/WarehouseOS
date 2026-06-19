@@ -14,6 +14,8 @@ class WarehouseSerializer(serializers.ModelSerializer):
         
 #API สำหรับแสดงยอดคงเหลือสินค้าในคลัง
 class StockBalanceSerializer(serializers.ModelSerializer):
+    product_name = serializers.CharField(source='product.name', read_only=True)
+
     class Meta:
         model = StockBalance
         fields = '__all__'

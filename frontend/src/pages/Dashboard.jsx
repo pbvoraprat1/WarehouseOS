@@ -9,28 +9,11 @@ import {
 import { StatusBadge } from "@/components/StatusBadge";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
-
-// ==========================================
-// 1. Interfaces (กำหนดหน้าตาข้อมูลสำหรับ TypeScript)
-// ==========================================
-
-// สำหรับรายชื่อคลังสินค้าใน Dropdown
-
+import api from "../lib/axios";
 // สำหรับข้อมูลใน Dashboard หลัก
-
-const apiUrl = import.meta.env.VITE_API_BASE_URL;
-const username = import.meta.env.VITE_API_USERNAME;
-const password = import.meta.env.VITE_API_PASSWORD;
-const token = btoa(`${username}:${password}`);
-
 export default function Dashboard() {
-  // ==========================================
-  // 2. States (ตัวแปรเก็บสถานะต่างๆ)
-  // ==========================================
-
   const [selectedWarehouseId, setSelectedWarehouseId] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
-
   // ==========================================
   // 3. React Query สำหรับดึงข้อมูล
   // ==========================================
@@ -40,12 +23,8 @@ export default function Dashboard() {
     {
       queryKey: ["warehouses"],
       queryFn: async () => {
-        const response = await fetch(`${apiUrl}/warehouse/list/`, {
-          headers: { Authorization: `Basic ${token}` },
-        });
-        if (!response.ok)
-          throw new Error("ดึงข้อมูลรายชื่อคลังสินค้าไม่สำเร็จ");
-        const data = await response.json();
+        const response = await api.get('/warehouse/list/');
+        const data = response.data;
 
         // เลือกคลังแรกอัตโนมัติถ้ายังไม่ได้เลือก
         if (data.length > 0 && !selectedWarehouseId) {
@@ -64,14 +43,8 @@ export default function Dashboard() {
   } = useQuery({
     queryKey: ["dashboard", selectedWarehouseId],
     queryFn: async () => {
-      const response = await fetch(
-        `${apiUrl}/warehouse/dashboard/${selectedWarehouseId}/`,
-        {
-          headers: { Authorization: `Basic ${token}` },
-        },
-      );
-      if (!response.ok) throw new Error("ดึงข้อมูล Dashboard ไม่สำเร็จ");
-      return response.json();
+      const response = await api.get(`/warehouse/dashboard/${selectedWarehouseId}/`);
+      return response.data;
     },
     enabled: !!selectedWarehouseId, // query จะรันก็ต่อเมื่อมีค่า selectedWarehouseId
   });
@@ -218,7 +191,7 @@ export default function Dashboard() {
               <thead>
                 <tr className="border-b border-border bg-muted/50">
                   <th className="px-5 py-3 text-left font-medium text-muted-foreground">
-                    Product ID
+                    Product
                   </th>
                   <th className="px-5 py-3 text-right font-medium text-muted-foreground">
                     Quantity
@@ -238,7 +211,7 @@ export default function Dashboard() {
                       )}
                     >
                       <td className="px-5 py-3 font-mono text-xs text-muted-foreground truncate max-w-[200px]">
-                        {p.product}
+                        {p.product_name || p.product}
                       </td>
                       <td className="px-5 py-3 text-right">
                         <StatusBadge
