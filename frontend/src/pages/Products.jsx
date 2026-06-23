@@ -5,9 +5,11 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { getProducts } from "../lib/api";
+import AddProductModal from "./AddProductModal";
 
 export default function Products() {
   const [search, setSearch] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const {
     data: products = [],
@@ -37,7 +39,7 @@ export default function Products() {
           </p>
         </div>
         <button
-          onClick={() => toast.info("Add Product modal — coming soon.")}
+          onClick={() => setIsModalOpen(true)}
           className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-90 transition-opacity"
         >
           <Plus className="h-4 w-4" /> Add New Product
@@ -167,6 +169,10 @@ export default function Products() {
           </tbody>
         </table>
       </div>
+      <AddProductModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
     </div>
   );
 }

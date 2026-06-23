@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
 
 const navItems = [
   { label: "Dashboard", path: "/", icon: LayoutDashboard },
@@ -18,6 +19,19 @@ const navItems = [
 ];
 
 export function AppSidebar() {
+  const navigate = useNavigate();
+  //ดึงชื่อมาแสดง
+  const username = localStorage.getItem('username') || 'User'
+  //ดึงชื่อมาแสดงตัวย่อแค่ 2 ตัวอักษร
+  const initials = username.substring(0, 2).toUpperCase();
+  const handleLogout = () => {
+    //ลบ token ออกจาก localStorage
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('username');
+    //พาไปหน้า login
+    navigate('/login');
+  }
   return (
     <aside className="fixed inset-y-0 left-0 z-30 flex w-60 flex-col bg-sidebar text-sidebar-foreground">
       {/* Logo */}
@@ -60,13 +74,13 @@ export function AppSidebar() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-sidebar-accent-foreground truncate">
-              John Doe
+              {initials}
             </p>
             <p className="text-xs text-sidebar-muted truncate">
-              john@company.com
+              {username}
             </p>
           </div>
-          <button className="text-sidebar-muted hover:text-sidebar-accent-foreground transition-colors">
+          <button onClick={handleLogout} className="text-sidebar-muted hover:text-sidebar-accent-foreground transition-colors">
             <LogOut className="h-4 w-4" />
           </button>
         </div>

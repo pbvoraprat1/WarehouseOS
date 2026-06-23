@@ -36,6 +36,7 @@ export default function Login() {
       // 2. ถ้าสำเร็จ เก็บ Token
       localStorage.setItem('access_token', response.data.access);
       localStorage.setItem('refresh_token', response.data.refresh);
+      localStorage.setItem('username', username);
 
       // 3. พาไปหน้า Dashboard
       navigate("/");
