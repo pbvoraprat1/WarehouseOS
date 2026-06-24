@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Warehouse, StockBalance, StockTransaction, Product
+from .models import Warehouse, StockBalance, StockTransaction, Product, Category
 
 #API สำหรับจัดการคลังสินค้า
 class WarehouseSerializer(serializers.ModelSerializer):
@@ -42,7 +42,7 @@ class StockmovementSerializer(serializers.Serializer):
 
 class ProductSerializer(serializers.ModelSerializer):
     #API สำหรับแสดงข้อมูลสินค้า
-    category_name = serializers.CharField(source='category.name', read_only=True)
+    category_name = serializers.CharField(source='category.name')
     #สำหรับแสดงยอดคงเหลือรวมจากทุกคลัง
     total_stock = serializers.SerializerMethodField()
 
@@ -63,3 +63,10 @@ class ProductSerializer(serializers.ModelSerializer):
         from django.db.models import Sum
         stock = obj.stock_balances.aggregate(total=Sum('quantity'))['total']
         return stock if stock is not None else 0
+
+    def create(self, validated_data):
+        category_data = validated_data.pop('category', None)
+        if category_data and 'name' in category_data:
+            category, created = Category.objects.get_or_create(name=category_data['name'])
+            validated_data['category'] = category
+        return Product.objects.create(**validated_data)

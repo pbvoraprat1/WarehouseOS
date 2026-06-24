@@ -58,7 +58,7 @@ export default function Dashboard() {
     return (
       <div className="flex h-[50vh] flex-col items-center justify-center text-muted-foreground gap-3">
         <Loader2 className="h-6 w-6 animate-spin" />
-        กำลังเชื่อมต่อและดึงข้อมูลจากระบบ...
+        Loading...
       </div>
     );
   }
@@ -75,7 +75,7 @@ export default function Dashboard() {
     return (
       <div className="flex flex-col h-[50vh] items-center justify-center space-y-4">
         <div className="text-destructive font-semibold">
-          ไม่พบข้อมูลคลังสินค้านี้ หรือเกิดข้อผิดพลาดในการเชื่อมต่อ
+          Warehouse not found or connection error.
         </div>
       </div>
     );
@@ -130,7 +130,7 @@ export default function Dashboard() {
                 ))
               ) : (
                 <div className="px-4 py-3 text-sm text-muted-foreground text-center">
-                  ไม่มีข้อมูลคลังสินค้า
+                  No warehouse data
                 </div>
               )}
             </div>
@@ -228,7 +228,7 @@ export default function Dashboard() {
                       colSpan={2}
                       className="px-5 py-8 text-center text-muted-foreground"
                     >
-                      ไม่มีสินค้าขาดสต็อก 🎉
+                      No out of stock items
                     </td>
                   </tr>
                 )}
@@ -293,7 +293,7 @@ export default function Dashboard() {
                       colSpan={3}
                       className="px-5 py-8 text-center text-muted-foreground"
                     >
-                      ไม่มีประวัติการเคลื่อนไหว
+                      No transaction history
                     </td>
                   </tr>
                 )}
