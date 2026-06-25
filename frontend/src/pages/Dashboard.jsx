@@ -257,6 +257,9 @@ export default function Dashboard() {
                   <th className="px-5 py-3 text-left font-medium text-muted-foreground">
                     Reference
                   </th>
+                  <th className="px-5 py-3 text-left font-medium text-muted-foreground">
+                    Action by
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -284,6 +287,11 @@ export default function Dashboard() {
                       </td>
                       <td className="px-5 py-3 font-mono text-xs text-muted-foreground">
                         {t.reference_document || "-"}
+                      </td>
+                      <td className="px-5 py-3 font-medium text-foreground">
+                        {t.action_by_name?.length > 7
+                          ? `${t.action_by_name.substring(0, 7)}...`
+                          : t.action_by_name}
                       </td>
                     </tr>
                   ))

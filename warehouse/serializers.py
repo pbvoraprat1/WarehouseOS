@@ -22,6 +22,7 @@ class StockBalanceSerializer(serializers.ModelSerializer):
 
 #API สำหรับแสดงรายการการเคลื่อนไหวสินค้าในคลัง(read-only)
 class StockTransactionSerializer(serializers.ModelSerializer):
+    action_by_name = serializers.CharField(source='created_by.username', read_only=True)
     class Meta:
         model = StockTransaction
         fields = '__all__'

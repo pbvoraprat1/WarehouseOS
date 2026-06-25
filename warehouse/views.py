@@ -7,7 +7,7 @@ from django.core.exceptions import ValidationError
 from .services import perform_stock_transaction
 from .serializers import StockBalanceSerializer, StockTransactionSerializer, StockmovementSerializer, ProductSerializer, WarehouseSerializer
 from .models import Product, StockBalance, Warehouse, StockTransaction
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 
 #การเคลื่อนไหวของสินค้าในคลัง เช่น รับสินค้าเข้าคลัง, เบิกสินค้า, ปรับยอดคงเหลือ
 class StockMovementAPIView(APIView):
@@ -52,7 +52,12 @@ class ProductListAPIView(APIView):
 
 #รายละเอียดสินค้าและแก้ไขข้อมูลสินค้า(เช่น ชื่อ, หมวดหมู่, ราคาต้นทุน) และลบสินค้า(ทำให้ is_active = False)
 class ProductDetailAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    #เช็คสิทธการเข้าถึง
+    def get (self):
+        if self.request.user in ['PUT' , 'DELETE', 'PATCH']:
+            return [IsAdminUser()]
+        return [IsAuthenticated()]
+
     def put(self, request, product_id):
         try:
             product = Product.objects.get(id=product_id)
