@@ -5,9 +5,11 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.core.exceptions import ValidationError
 from .services import perform_stock_transaction
-from .serializers import StockBalanceSerializer, StockTransactionSerializer, StockmovementSerializer, ProductSerializer, WarehouseSerializer
+from .serializers import StockBalanceSerializer, StockTransactionSerializer, StockmovementSerializer, ProductSerializer, WarehouseSerializer, CustomTokenObtainPairSerializer
 from .models import Product, StockBalance, Warehouse, StockTransaction
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework import generics
 
 #การเคลื่อนไหวของสินค้าในคลัง เช่น รับสินค้าเข้าคลัง, เบิกสินค้า, ปรับยอดคงเหลือ
 class StockMovementAPIView(APIView):
@@ -37,24 +39,23 @@ class StockMovementAPIView(APIView):
             return Response({"error": f"สาเหตุที่พัง: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 #รายการสินค้าทั้งหมดที่มีอยู่ในระบบ(เฉพาะสินค้าที่ is_active = True)    
-class ProductListAPIView(APIView):
+class ProductListAPIView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
-    def get(self, request):
-        products = Product.objects.filter(is_active=True)
-        serializer = ProductSerializer(products, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    def post(self, request):
-        serializer = ProductSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    serializer_class = ProductSerializer
+    
+    def get_queryset(self):
+        return Product.objects.filter(is_active=True).order_by('sku')
+        
+    def paginate_queryset(self, queryset):
+        if self.request.query_params.get('all') == 'true':
+            return None
+        return super().paginate_queryset(queryset)
 
 #รายละเอียดสินค้าและแก้ไขข้อมูลสินค้า(เช่น ชื่อ, หมวดหมู่, ราคาต้นทุน) และลบสินค้า(ทำให้ is_active = False)
 class ProductDetailAPIView(APIView):
     #เช็คสิทธการเข้าถึง
     def get (self):
-        if self.request.user in ['PUT' , 'DELETE', 'PATCH']:
+        if self.request.method in ['PUT' , 'DELETE', 'PATCH']:
             return [IsAdminUser()]
         return [IsAuthenticated()]
 
@@ -144,3 +145,6 @@ class WarehouseListAPIView(APIView):
         warehouses = Warehouse.objects.filter(is_active=True)
         serializer = WarehouseSerializer(warehouses, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer

@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import Warehouse, StockBalance, StockTransaction, Product, Category
 
 #API สำหรับจัดการคลังสินค้า
@@ -71,3 +72,11 @@ class ProductSerializer(serializers.ModelSerializer):
             category, created = Category.objects.get_or_create(name=category_data['name'])
             validated_data['category'] = category
         return Product.objects.create(**validated_data)
+    
+#ส่ง is_superuser ไปใน token
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        data['is_superuser'] = self.user.is_superuser
+        data['username'] = self.user.username
+        return data

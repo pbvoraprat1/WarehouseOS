@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import api from "../lib/axios";
-import { getProducts } from "../lib/api";
+import { getAllProducts } from "../lib/api";
 
 const productSchema = z.object({
     sku: z.string().min(1, "Please enter a SKU"),
@@ -36,7 +36,7 @@ export default function AddProductModal({ isOpen, onClose }) {
         data: products = [],
         isLoading,
         isError,
-    } = useQuery({ queryKey: ["products"], queryFn: getProducts });
+    } = useQuery({ queryKey: ["products"], queryFn: getAllProducts });
     // กรองเอาเฉพาะหมวดหมู่ที่ไม่ซ้ำกัน และตัดค่าว่างทิ้ง
     const existingCategories = [
         ...new Set(products.map((p) => p.category_name).filter(Boolean)),

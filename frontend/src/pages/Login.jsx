@@ -36,7 +36,9 @@ export default function Login() {
       // 2. ถ้าสำเร็จ เก็บ Token
       localStorage.setItem('access_token', response.data.access);
       localStorage.setItem('refresh_token', response.data.refresh);
+      localStorage.setItem('is_superuser', response.data.is_superuser);
       localStorage.setItem('username', username);
+      const isSuperuser = localStorage.getItem('is_superuser') === 'true';
 
       // 3. พาไปหน้า Dashboard
       navigate("/");

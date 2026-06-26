@@ -5,7 +5,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/axios";
-import { getProducts, getWarehouses } from "@/lib/api";
+import { getAllProducts, getWarehouses } from "@/lib/api";
 
 export default function StockMovements() {
   const queryClient = useQueryClient();
@@ -20,7 +20,7 @@ export default function StockMovements() {
   // Fetch Products
   const { data: products = [] } = useQuery({
     queryKey: ["products"],
-    queryFn: () => getProducts(),
+    queryFn: () => getAllProducts(),
   });
 
 

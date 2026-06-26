@@ -200,7 +200,7 @@ export default function Dashboard() {
               </thead>
               <tbody>
                 {dbData.low_stock_products.length > 0 ? (
-                  dbData.low_stock_products.map((p, index) => (
+                  dbData.low_stock_products.slice(0, 10).map((p, index) => (
                     <tr
                       key={index}
                       className={cn(
@@ -264,7 +264,7 @@ export default function Dashboard() {
               </thead>
               <tbody>
                 {dbData.recent_transactions.length > 0 ? (
-                  dbData.recent_transactions.map((t, index) => (
+                  dbData.recent_transactions.slice(0, 10).map((t, index) => (
                     <tr
                       key={index}
                       className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"

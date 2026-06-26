@@ -4,21 +4,27 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
-import { getProducts } from "../lib/api";
+import { getPaginatedProducts } from "../lib/api";
 import AddProductModal from "./AddProductModal";
 
 export default function Products() {
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const isSuperuser = localStorage.getItem('is_superuser') === 'true';
 
   const {
-    data: products = [],
+    data,
     isLoading,
     isError,
   } = useQuery({
-    queryKey: ["products"],
-    queryFn: () => getProducts(),
+    queryKey: ["products", page],
+    queryFn: () => getPaginatedProducts(page),
   });
+
+  const products = data?.results || data || [];
+  const hasNext = !!data?.next;
+  const hasPrevious = !!data?.previous;
 
   const filtered = products.filter(
     (p) =>
@@ -60,7 +66,7 @@ export default function Products() {
 
       {/* Table */}
       <div className="rounded-xl border border-border bg-card shadow-sm overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm table-auto">
           <thead>
             <tr className="border-b border-border bg-muted/50">
               {[
@@ -70,7 +76,6 @@ export default function Products() {
                 "Base Price",
                 "Stock",
                 "Reorder Lvl",
-                "Action",
               ].map((h) => (
                 <th
                   key={h}
@@ -79,13 +84,18 @@ export default function Products() {
                   {h}
                 </th>
               ))}
+              {isSuperuser && (
+              <th className="px-5 py-3 text-left font-medium text-muted-foreground whitespace-nowrap w-auto">
+                Action
+              </th>
+              )}
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={isSuperuser ? 7 : 6 }
                   className="px-5 py-10 text-center text-muted-foreground"
                 >
                   <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
@@ -95,7 +105,7 @@ export default function Products() {
             ) : isError ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={ isSuperuser ? 7 : 6 }
                   className="px-5 py-10 text-center text-destructive"
                 >
                   Error loading products. Please try again later.
@@ -104,7 +114,7 @@ export default function Products() {
             ) : filtered.length === 0 ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={isSuperuser ? 7 : 6}
                   className="px-5 py-10 text-center text-muted-foreground"
                 >
                   No products found.
@@ -147,6 +157,7 @@ export default function Products() {
                   <td className="px-5 py-3 text-muted-foreground">
                     {p.reorder_level}
                   </td>
+                  {isSuperuser && (
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-1">
                       <button
@@ -163,12 +174,37 @@ export default function Products() {
                       </button>
                     </div>
                   </td>
+                  )}
                 </tr>
               ))
             )}
           </tbody>
         </table>
       </div>
+
+      {/* Pagination Controls */}
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-muted-foreground">
+          Showing page {page}
+        </span>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={!hasPrevious}
+            className="px-3 py-1.5 rounded-md border border-border bg-card text-foreground hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            Previous
+          </button>
+          <button
+            onClick={() => setPage(p => p + 1)}
+            disabled={!hasNext}
+            className="px-3 py-1.5 rounded-md border border-border bg-card text-foreground hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            Next
+          </button>
+        </div>
+      </div>
+
       <AddProductModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
