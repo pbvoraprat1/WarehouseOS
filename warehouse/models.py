@@ -64,3 +64,14 @@ class StockTransaction(models.Model):
 
     class Meta:
         ordering = ['-timestamp']
+        
+#Model สำหรับบันทึกผู้ใช้ที่กดลบ products       
+class ActivityLog(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    action = models.CharField(max_length=255)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user} - {self.action} - {self.timestamp.strftime('%Y-%m-%d %H:%M')}"
+    class Meta:
+        ordering = ['-timestamp']

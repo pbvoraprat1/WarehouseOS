@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import Warehouse, StockBalance, StockTransaction, Product, Category
+from .models import Warehouse, StockBalance, StockTransaction, Product, Category, ActivityLog
 
 #API สำหรับจัดการคลังสินค้า
 class WarehouseSerializer(serializers.ModelSerializer):
@@ -80,3 +80,10 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         data['is_superuser'] = self.user.is_superuser
         data['username'] = self.user.username
         return data
+    
+class ActivityLogSerializer(serializers.ModelSerializer):
+    user = serializers.CharField(source='user.username', read_only=True)
+    class Meta:
+        model = ActivityLog
+        fields = '__all__'
+        read_only_fields = ('id','user','action','timestamp')

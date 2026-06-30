@@ -3,21 +3,35 @@ import { Search, Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { useQuery } from "@tanstack/react-query";
-import { getPaginatedProducts } from "../lib/api";
+import { useQuery, useMutation, useQueryClient, QueryClient } from "@tanstack/react-query";
+import { getPaginatedProducts, DeleteProduct } from "../lib/api";
 import AddProductModal from "./AddProductModal";
 
 export default function Products() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const isSuperuser = localStorage.getItem('is_superuser') === 'true';
+  const isSuperuser = localStorage.getItem("is_superuser") === "true";
+  //ฟังชั่นสำหรับลบ
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState(null);
+  const [confirmInput, setConfirmInput] = useState("");
 
-  const {
-    data,
-    isLoading,
-    isError,
-  } = useQuery({
+  const deleteMutation = useMutation({
+    mutationFn: (id) => DeleteProduct(productToDelete.id),
+    onSuccess: () => {
+      toast.success("Product deleted successfully!");
+      setIsDeleteModalOpen(false);
+      setConfirmInput("");
+      setProductToDelete(null);
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    },
+    onError: (error) => {
+      toast.error("Failed to delete");
+    },
+  });
+
+  const { data, isLoading, isError } = useQuery({
     queryKey: ["products", page],
     queryFn: () => getPaginatedProducts(page),
   });
@@ -85,9 +99,9 @@ export default function Products() {
                 </th>
               ))}
               {isSuperuser && (
-              <th className="px-5 py-3 text-left font-medium text-muted-foreground whitespace-nowrap w-auto">
-                Action
-              </th>
+                <th className="px-5 py-3 text-left font-medium text-muted-foreground whitespace-nowrap w-auto">
+                  Action
+                </th>
               )}
             </tr>
           </thead>
@@ -95,7 +109,7 @@ export default function Products() {
             {isLoading ? (
               <tr>
                 <td
-                  colSpan={isSuperuser ? 7 : 6 }
+                  colSpan={isSuperuser ? 7 : 6}
                   className="px-5 py-10 text-center text-muted-foreground"
                 >
                   <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
@@ -105,7 +119,7 @@ export default function Products() {
             ) : isError ? (
               <tr>
                 <td
-                  colSpan={ isSuperuser ? 7 : 6 }
+                  colSpan={isSuperuser ? 7 : 6}
                   className="px-5 py-10 text-center text-destructive"
                 >
                   Error loading products. Please try again later.
@@ -158,22 +172,25 @@ export default function Products() {
                     {p.reorder_level}
                   </td>
                   {isSuperuser && (
-                  <td className="px-5 py-3">
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => toast.info(`Edit ${p.name}`)}
-                        className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </button>
-                      <button
-                        onClick={() => toast.error(`Delete ${p.name}`)}
-                        className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  </td>
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => toast.info(`Edit ${p.name}`)}
+                          className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setProductToDelete(p);
+                            setIsDeleteModalOpen(true);
+                          }}
+                          className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </td>
                   )}
                 </tr>
               ))
@@ -184,19 +201,17 @@ export default function Products() {
 
       {/* Pagination Controls */}
       <div className="flex items-center justify-between text-sm">
-        <span className="text-muted-foreground">
-          Showing page {page}
-        </span>
+        <span className="text-muted-foreground">Showing page {page}</span>
         <div className="flex gap-2">
           <button
-            onClick={() => setPage(p => Math.max(1, p - 1))}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={!hasPrevious}
             className="px-3 py-1.5 rounded-md border border-border bg-card text-foreground hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Previous
           </button>
           <button
-            onClick={() => setPage(p => p + 1)}
+            onClick={() => setPage((p) => p + 1)}
             disabled={!hasNext}
             className="px-3 py-1.5 rounded-md border border-border bg-card text-foreground hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
@@ -209,6 +224,63 @@ export default function Products() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
       />
+      {isDeleteModalOpen && productToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-xl bg-card p-6 shadow-lg border border-border">
+            <h2 className="text-lg font-semibold text-foreground mb-2">
+              Confirm Deletion
+            </h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              Type{" "}
+              <strong className="text-foreground">{productToDelete.sku}</strong>{" "}
+              to confirm you want to delete{" "}
+              <strong className="text-foreground">
+                {productToDelete.name}
+              </strong>
+              . This action cannot be undone.
+            </p>
+
+            <input
+              type="text"
+              value={confirmInput}
+              onChange={(e) => setConfirmInput(e.target.value)}
+              placeholder={productToDelete.sku}
+              className="w-full mb-6 rounded-lg border border-border bg-background px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-destructive/40"
+            />
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setIsDeleteModalOpen(false);
+                  setConfirmInput(""); // ล้างค่าเผื่อเปิดรอบหน้า
+                  setProductToDelete(null);
+                }}
+                className="px-4 py-2 rounded-lg text-sm font-medium border border-border hover:bg-muted transition-colors"
+              >
+                Cancel
+              </button>
+
+              <button
+                disabled={
+                  confirmInput !== productToDelete.sku ||
+                  deleteMutation.isPending
+                }
+                onClick={() => {
+                  deleteMutation.mutate(
+                    productToDelete.id || productToDelete.sku,
+                  );
+
+                  setIsDeleteModalOpen(false);
+                  setConfirmInput("");
+                }}
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-destructive text-destructive-foreground hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                {deleteMutation.isPending ? "Deleting..." : "Confirm Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

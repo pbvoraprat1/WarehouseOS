@@ -19,3 +19,13 @@ export const getWarehouses = async () => {
     const response = await api.get('/warehouse/list/');
     return response.data.results || response.data;
 };
+
+export const DeleteProduct = async(id) => {
+    const response = await api.delete(`/warehouse/products/${id}/`)
+    return response.data
+};
+
+export const getActivityLogs = async (page = 1) => {
+    const response = await api.get(`/warehouse/log/?page=${page}`);
+    return response.data;
+};

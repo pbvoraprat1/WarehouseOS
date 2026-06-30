@@ -5,8 +5,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.core.exceptions import ValidationError
 from .services import perform_stock_transaction
-from .serializers import StockBalanceSerializer, StockTransactionSerializer, StockmovementSerializer, ProductSerializer, WarehouseSerializer, CustomTokenObtainPairSerializer
-from .models import Product, StockBalance, Warehouse, StockTransaction
+from .serializers import StockBalanceSerializer, StockTransactionSerializer, StockmovementSerializer, ProductSerializer, WarehouseSerializer, CustomTokenObtainPairSerializer, ActivityLogSerializer
+from .models import Product, StockBalance, Warehouse, StockTransaction, ActivityLog
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework import generics
@@ -74,6 +74,11 @@ class ProductDetailAPIView(APIView):
             product = Product.objects.get(id=product_id)
             product.is_active = False
             product.save()
+            #สำหรับบันทึกว่าใครเป็นคนลบ
+            ActivityLog.objects.create(
+                user=request.user, 
+                action=f"Deleted product: {product.name} (SKU: {product.sku})")
+            print(f"ลบสินค้า: {product.name}")
             return Response({"message": "ลบสินค้าสำเร็จ"}, status=status.HTTP_200_OK)
         except Product.DoesNotExist:
             return Response({"error": "ไม่พบสินค้า"}, status=status.HTTP_404_NOT_FOUND)
@@ -148,3 +153,8 @@ class WarehouseListAPIView(APIView):
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
+
+class ActivityLogListView(generics.ListAPIView):
+    queryset = ActivityLog.objects.all()
+    serializer_class = ActivityLogSerializer
+    permission_classes = [IsAuthenticated]
