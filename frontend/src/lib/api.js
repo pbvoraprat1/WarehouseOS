@@ -29,3 +29,8 @@ export const getActivityLogs = async (page = 1) => {
     const response = await api.get(`/warehouse/log/?page=${page}`);
     return response.data;
 };
+
+export const UpdateProduct = async ({ id, payload }) => {
+    const response = await api.put(`/warehouse/products/${id}/`, payload);
+    return response.data;
+};

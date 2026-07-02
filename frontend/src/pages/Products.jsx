@@ -4,8 +4,9 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient, QueryClient } from "@tanstack/react-query";
-import { getPaginatedProducts, DeleteProduct } from "../lib/api";
+import { getPaginatedProducts, DeleteProduct, UpdateProduct } from "../lib/api";
 import AddProductModal from "./AddProductModal";
+import EditProductModal from "./EditProductModel";
 
 export default function Products() {
   const [search, setSearch] = useState("");
@@ -16,6 +17,9 @@ export default function Products() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
   const [confirmInput, setConfirmInput] = useState("");
+  //ฟังชั่นสำหรับแก้ไข
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [productToUpdate, setProductToUpdate] = useState(null);
 
   const deleteMutation = useMutation({
     mutationFn: (id) => DeleteProduct(productToDelete.id),
@@ -28,6 +32,18 @@ export default function Products() {
     },
     onError: (error) => {
       toast.error("Failed to delete");
+    },
+  });
+  const UpdateMutation = useMutation({
+    mutationFn: ({id,payload}) => UpdateProduct({ id, payload }),
+    onSuccess: () => {
+      toast.success("Product updated successfully!");
+      setIsEditModalOpen(false);
+      setProductToUpdate(null);
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    },
+    onError: (error) => {
+      toast.error("Failed to update product");
     },
   });
 
@@ -175,7 +191,10 @@ export default function Products() {
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-1">
                         <button
-                          onClick={() => toast.info(`Edit ${p.name}`)}
+                          onClick={() => {
+                            setProductToUpdate(p);
+                            setIsEditModalOpen(true);
+                          }}
                           className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                         >
                           <Pencil className="h-3.5 w-3.5" />
@@ -224,6 +243,24 @@ export default function Products() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
       />
+      {/* Edit Product Modal */}
+      {isEditModalOpen && productToUpdate && (
+        <EditProductModal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setProductToUpdate(null);
+          }}
+          product={productToUpdate}
+          onSubmit={(updatedData) => {
+            UpdateMutation.mutate({ 
+              id: productToUpdate.id,
+              payload: updatedData });
+          }}
+          isLoading={UpdateMutation.isPending}
+          error={UpdateMutation.error}
+        />
+      )}
       {isDeleteModalOpen && productToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-xl bg-card p-6 shadow-lg border border-border">

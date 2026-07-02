@@ -44,7 +44,7 @@ class StockmovementSerializer(serializers.Serializer):
 
 class ProductSerializer(serializers.ModelSerializer):
     #API สำหรับแสดงข้อมูลสินค้า
-    category_name = serializers.CharField(source='category.name')
+    category_name = serializers.CharField(source='category.name', read_only=True)
     #สำหรับแสดงยอดคงเหลือรวมจากทุกคลัง
     total_stock = serializers.SerializerMethodField()
 

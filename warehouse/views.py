@@ -65,6 +65,10 @@ class ProductDetailAPIView(APIView):
             serializer = ProductSerializer(product, data=request.data)
             if serializer.is_valid():
                 serializer.save()
+                activity_log = ActivityLog.objects.create(
+                    user=request.user, 
+                    action=f"Updated product: {product.name} (SKU: {product.sku})")
+                print(f"แก้ไขสินค้า: {product.name}")
                 return Response(serializer.data, status=status.HTTP_200_OK)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Product.DoesNotExist:

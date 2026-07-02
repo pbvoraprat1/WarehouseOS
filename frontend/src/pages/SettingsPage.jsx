@@ -7,22 +7,19 @@ import { cn } from "@/lib/utils";
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("general");
   const isSuperuser = localStorage.getItem("is_superuser") === "true";
-  
-  //State สำหรับเพจ
+
+  // State สำหรับเพจ
   const [page, setPage] = useState(1);
 
-  //ดึงข้อมูลด้วย useQuery
-  const {
-    data,
-    isLoading,
-    isError,
-  } = useQuery({
+  // ดึงข้อมูลด้วย useQuery
+  const { data, isLoading, isError } = useQuery({
     queryKey: ["activityLogs", page],
     queryFn: () => getActivityLogs(page),
     // เปิดการยิง API เฉพาะตอนที่กดแท็บ history และเป็น admin เท่านั้น
     enabled: activeTab === "history" && isSuperuser,
   });
-  //สำหรับปุ่ม page
+
+  // สำหรับปุ่ม page
   const logs = data?.results || data || [];
   const hasNext = !!data?.next;
   const hasPrevious = !!data?.previous;
@@ -68,7 +65,7 @@ export default function SettingsPage() {
             </button>
           )}
         </div>
-        
+
         <div className="flex-1">
           {activeTab === "general" && (
             <div className="rounded-xl border border-border bg-card p-10 shadow-sm text-center">
@@ -83,7 +80,9 @@ export default function SettingsPage() {
           {activeTab === "history" && isSuperuser && (
             <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden flex flex-col">
               <div className="px-5 py-4 border-b border-border bg-muted/20">
-                <h2 className="font-semibold text-foreground">System Audit Log</h2>
+                <h2 className="font-semibold text-foreground">
+                  System Audit Log
+                </h2>
               </div>
 
               {/* ส่วนตารางข้อมูล */}
@@ -105,26 +104,38 @@ export default function SettingsPage() {
                   <tbody>
                     {isLoading ? (
                       <tr>
-                        <td colSpan={3} className="px-5 py-10 text-center text-muted-foreground">
+                        <td
+                          colSpan={3}
+                          className="px-5 py-10 text-center text-muted-foreground"
+                        >
                           <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
                           Loading history...
                         </td>
                       </tr>
                     ) : isError ? (
                       <tr>
-                        <td colSpan={3} className="px-5 py-10 text-center text-destructive">
+                        <td
+                          colSpan={3}
+                          className="px-5 py-10 text-center text-destructive"
+                        >
                           Failed to load history.
                         </td>
                       </tr>
                     ) : !logs || logs.length === 0 ? (
                       <tr>
-                        <td colSpan={3} className="px-5 py-10 text-center text-muted-foreground">
+                        <td
+                          colSpan={3}
+                          className="px-5 py-10 text-center text-muted-foreground"
+                        >
                           No activity logs found.
                         </td>
                       </tr>
                     ) : (
                       logs.map((log) => (
-                        <tr key={log.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                        <tr
+                          key={log.id}
+                          className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
+                        >
                           <td className="px-5 py-3 text-muted-foreground whitespace-nowrap">
                             {new Date(log.timestamp).toLocaleString()}
                           </td>
@@ -132,7 +143,42 @@ export default function SettingsPage() {
                             {log.user}
                           </td>
                           <td className="px-5 py-3 text-muted-foreground">
-                            {log.action}
+                            {log.action
+                              .split(/(update[a-z]*|delete[a-z]*|create[a-z]*|add[a-z]*)/i)
+                              .map((part, index) => {
+                                const lowerPart = part.toLowerCase();
+
+                                // สีของDelete
+                                if (lowerPart.startsWith("delete")) {
+                                  return (
+                                    <span key={index} className="text-red-500 font-medium">
+                                      {part}
+                                  </span>
+                                  );
+                                }
+                                // สีของUpdate
+                                if (lowerPart.startsWith("update")) {
+                                  return (
+                                    <span key={index} className="text-amber-500 font-medium">
+                                      {part}
+                                    </span>
+                                  );
+                                }
+                                // สีของ Create หรือ Add
+                                if (
+                                  lowerPart.startsWith("create") ||
+                                  lowerPart.startsWith("add")
+                                ) {
+                                  return (
+                                    <span key={index} className="text-emerald-500 font-medium">
+                                      {part}
+                                    </span>
+                                  );
+                                }
+
+                                // else
+                                return <span key={index}>{part}</span>;
+                              })}
                           </td>
                         </tr>
                       ))
@@ -163,7 +209,6 @@ export default function SettingsPage() {
                   </button>
                 </div>
               </div>
-              
             </div>
           )}
         </div>
