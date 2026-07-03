@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import LowStockAlertAPIView, WarehouseListAPIView, ProductDetailAPIView, ProductListAPIView, StockBalanceListAPIView, StockMovementAPIView, StockBalanceAPIView, ActivityLogListView
+from .views import LowStockAlertAPIView, WarehouseListAPIView, ProductDetailAPIView, ProductListAPIView, StockBalanceListAPIView, StockMovementAPIView, StockBalanceAPIView, ActivityLogListView, UserManagementAPIView, UserDetailManagementAPIView
 
 
 urlpatterns = [
@@ -10,6 +10,7 @@ urlpatterns = [
     path('<int:warehouse_id>/stock-balances/', StockBalanceListAPIView.as_view(), name='api-stock-balance-list'),
     path('dashboard/<int:warehouse_id>/', LowStockAlertAPIView.as_view(), name='api-low-stock-alert'),
     path('list/', WarehouseListAPIView.as_view(), name='api-warehouse-list'),
-    path('log/', ActivityLogListView.as_view(), name='api-activity-log-list')
-
+    path('log/', ActivityLogListView.as_view(), name='api-activity-log-list'),
+    path('users/', UserManagementAPIView.as_view(), name='user_management'),
+    path('users/<int:user_id>/', UserDetailManagementAPIView.as_view(), name='user_detail_management'),
 ]

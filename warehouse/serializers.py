@@ -1,6 +1,8 @@
 from rest_framework import serializers
+from django.contrib.auth.models import User
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import Warehouse, StockBalance, StockTransaction, Product, Category, ActivityLog
+from .models import Warehouse, StockBalance, StockTransaction, Product, Category, ActivityLog, UserProfile
+
 
 #API สำหรับจัดการคลังสินค้า
 class WarehouseSerializer(serializers.ModelSerializer):
@@ -44,7 +46,7 @@ class StockmovementSerializer(serializers.Serializer):
 
 class ProductSerializer(serializers.ModelSerializer):
     #API สำหรับแสดงข้อมูลสินค้า
-    category_name = serializers.CharField(source='category.name', read_only=True)
+    category_name = serializers.CharField(source='category.name')
     #สำหรับแสดงยอดคงเหลือรวมจากทุกคลัง
     total_stock = serializers.SerializerMethodField()
 
@@ -69,9 +71,16 @@ class ProductSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         category_data = validated_data.pop('category', None)
         if category_data and 'name' in category_data:
-            category, created = Category.objects.get_or_create(name=category_data['name'])
+            category, _ = Category.objects.get_or_create(name=category_data['name'])
             validated_data['category'] = category
-        return Product.objects.create(**validated_data)
+        return super().create(validated_data)
+    
+    def update(self, instance, validated_data):
+        category_data = validated_data.pop('category',None)
+        if category_data and 'name' in category_data:
+            category, _ = Category.objects.get_or_create(name=category_data['name'])
+            validated_data['category'] = category
+        return super().update(instance, validated_data)
     
 #ส่ง is_superuser ไปใน token
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -87,3 +96,21 @@ class ActivityLogSerializer(serializers.ModelSerializer):
         model = ActivityLog
         fields = '__all__'
         read_only_fields = ('id','user','action','timestamp')
+
+class UserSerializer(serializers.ModelSerializer):
+    can_manage_products = serializers.BooleanField(source='profile.can_manage_products', read_only=True)
+    can_manage_auto_reorder = serializers.BooleanField(source='profile.can_manage_auto_reorder', read_only=True)
+    can_manage_warehouses = serializers.BooleanField(source='profile.can_manage_warehouses', read_only=True)
+    can_manage_stock_movements = serializers.BooleanField(source='profile.can_manage_stock_movements', read_only=True)
+    can_view_activity_logs = serializers.BooleanField(source='profile.can_view_activity_logs', read_only=True)
+    class Meta:
+        model = User
+        fields = ['id',
+                'username',
+                'is_superuser',
+                'is_active',
+                'can_manage_products',
+                'can_manage_auto_reorder',
+                'can_manage_stock_movements',
+                'can_manage_warehouses',
+                'can_view_activity_logs']

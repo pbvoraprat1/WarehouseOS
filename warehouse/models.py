@@ -1,6 +1,9 @@
 import uuid
 from django.db import models
 from django.conf import settings
+from django.contrib.auth.models import User
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 #Category model(หมวดหมู่สินค้า)
 class Category(models.Model):
@@ -75,3 +78,21 @@ class ActivityLog(models.Model):
         return f"{self.user} - {self.action} - {self.timestamp.strftime('%Y-%m-%d %H:%M')}"
     class Meta:
         ordering = ['-timestamp']
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profile')
+    can_manage_warehouses = models.BooleanField(default=False, verbose_name="สิทธิ์จัดการคลังสินค้า (Action)")
+    can_manage_products = models.BooleanField(default=False, verbose_name="สิทธิ์จัดการสินค้า (Action)")
+    can_manage_auto_reorder = models.BooleanField(default=False, verbose_name="สิทธิ์ตั้งค่า Auto Reorder")
+    can_manage_stock_movements = models.BooleanField(default=False, verbose_name="สิทธิ์จัดการการเคลื่อนไหวสินค้า (Action)")
+    can_view_activity_logs = models.BooleanField(default=False, verbose_name="สิทธิ์ดู Activity Log (View)")
+
+    def __str__(self):
+        return f"Profile of {self.user.username}"
+@receiver(models.signals.post_save, sender=settings.AUTH_USER_MODEL)
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        UserProfile.objects.create(user=instance)
+@receiver(models.signals.post_save, sender=settings.AUTH_USER_MODEL)
+def save_user_profile(sender, instance, **kwargs):
+    instance.profile.save()

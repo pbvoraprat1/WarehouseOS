@@ -1,28 +1,83 @@
 import { useState } from "react";
-import { Settings, History, Loader2 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { getActivityLogs } from "../lib/api";
+import { Settings, History, Users, Loader2 } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getActivityLogs, getAllUsers, updateUserPermission } from "../lib/api";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("general");
   const isSuperuser = localStorage.getItem("is_superuser") === "true";
+  const queryClient = useQueryClient();
 
-  // State สำหรับเพจ
+  // State สำหรับเพจ (History)
   const [page, setPage] = useState(1);
 
-  // ดึงข้อมูลด้วย useQuery
-  const { data, isLoading, isError } = useQuery({
+  // ดึงข้อมูลด้วย useQuery สำหรับ History
+  const { data: historyData, isLoading: historyLoading, isError: historyError } = useQuery({
     queryKey: ["activityLogs", page],
     queryFn: () => getActivityLogs(page),
-    // เปิดการยิง API เฉพาะตอนที่กดแท็บ history และเป็น admin เท่านั้น
     enabled: activeTab === "history" && isSuperuser,
   });
 
+  // ดึงข้อมูลด้วย useQuery สำหรับ Users
+  const { data: usersData, isLoading: usersLoading } = useQuery({
+    queryKey: ["users"],
+    queryFn: getAllUsers,
+    enabled: activeTab === "users" && isSuperuser,
+  });
+
+  // Mutation สำหรับ update permission
+  const togglePermissionMutation = useMutation({
+    mutationFn: ({ userId, data }) => updateUserPermission(userId, data),
+    onSuccess: () => {
+      toast.success("อัปเดตสิทธิ์ผู้ใช้งานสำเร็จ!");
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+    },
+    onError: (error) => {
+      toast.error("เกิดข้อผิดพลาดในการอัปเดตสิทธิ์");
+      console.error(error);
+    },
+  });
+
+  // ฟังก์ชันสำหรับ toggle permission
+  const handleToggle = (userId, field, currentValue) => {
+    togglePermissionMutation.mutate({
+      userId,
+      data: { [field]: !currentValue }
+    });
+  };
+
   // สำหรับปุ่ม page
-  const logs = data?.results || data || [];
-  const hasNext = !!data?.next;
-  const hasPrevious = !!data?.previous;
+  const logs = historyData?.results || historyData || [];
+  const hasNext = !!historyData?.next;
+  const hasPrevious = !!historyData?.previous;
+
+  // คอมโพเนนต์ปุ่ม Toggle
+  const PermissionToggle = ({ user, field }) => {
+    if (user.is_superuser) {
+      return <span className="text-emerald-500 font-medium text-[10px] bg-emerald-500/10 px-2 py-1 rounded-md">Admin</span>;
+    }
+
+    const isGranted = user[field];
+    return (
+      <button
+        onClick={() => handleToggle(user.id, field, isGranted)}
+        disabled={togglePermissionMutation.isPending}
+        className={cn(
+          "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-50",
+          isGranted ? "bg-emerald-500" : "bg-muted-foreground/30"
+        )}
+      >
+        <span
+          className={cn(
+            "pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+            isGranted ? "translate-x-4" : "translate-x-0"
+          )}
+        />
+      </button>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -31,11 +86,12 @@ export default function SettingsPage() {
           Settings
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Manage application preferences and integrations.
+          Manage application preferences and user access.
         </p>
       </div>
 
       <div className="flex flex-col md:flex-row gap-6">
+        {/* แถบเมนูด้านซ้าย */}
         <div className="w-full md:w-64 flex flex-col gap-1">
           <button
             onClick={() => setActiveTab("general")}
@@ -51,22 +107,39 @@ export default function SettingsPage() {
           </button>
 
           {isSuperuser && (
-            <button
-              onClick={() => setActiveTab("history")}
-              className={cn(
-                "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left",
-                activeTab === "history"
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              )}
-            >
-              <History className="h-4 w-4" />
-              Activity History
-            </button>
+            <>
+              <button
+                onClick={() => setActiveTab("users")}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left",
+                  activeTab === "users"
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                <Users className="h-4 w-4" />
+                User Management
+              </button>
+              <button
+                onClick={() => setActiveTab("history")}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left",
+                  activeTab === "history"
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                <History className="h-4 w-4" />
+                Activity History
+              </button>
+            </>
           )}
         </div>
 
+        {/* เนื้อหาหลักด้านขวา */}
         <div className="flex-1">
+
+          {/* แท็บ General */}
           {activeTab === "general" && (
             <div className="rounded-xl border border-border bg-card p-10 shadow-sm text-center">
               <Settings className="mx-auto h-10 w-10 text-muted-foreground/30 mb-3" />
@@ -76,66 +149,84 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* เนื้อหาหน้า History สำหรับ Admin */}
-          {activeTab === "history" && isSuperuser && (
+          {/* แท็บ User Management */}
+          {activeTab === "users" && isSuperuser && (
             <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden flex flex-col">
               <div className="px-5 py-4 border-b border-border bg-muted/20">
-                <h2 className="font-semibold text-foreground">
-                  System Audit Log
-                </h2>
+                <h2 className="font-semibold text-foreground">User Management</h2>
               </div>
-
-              {/* ส่วนตารางข้อมูล */}
               <div className="overflow-x-auto">
                 <table className="w-full text-sm table-auto">
                   <thead>
                     <tr className="border-b border-border bg-muted/50">
-                      <th className="px-5 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">
-                        Time
-                      </th>
-                      <th className="px-5 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">
-                        User
-                      </th>
-                      <th className="px-5 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">
-                        Action
-                      </th>
+                      <th className="px-5 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">User</th>
+                      <th className="px-5 py-3 text-center font-medium text-muted-foreground whitespace-nowrap">Products</th>
+                      <th className="px-5 py-3 text-center font-medium text-muted-foreground whitespace-nowrap">Reorder</th>
+                      <th className="px-5 py-3 text-center font-medium text-muted-foreground whitespace-nowrap">Movements</th>
+                      <th className="px-5 py-3 text-center font-medium text-muted-foreground whitespace-nowrap">Warehouses</th>
+                      <th className="px-5 py-3 text-center font-medium text-muted-foreground whitespace-nowrap">Logs</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {isLoading ? (
+                    {usersLoading ? (
+                      <tr><td colSpan={6} className="text-center py-10"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
+                    ) : (
+                      usersData?.map((user) => (
+                        <tr key={user.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                          <td className="px-5 py-4 font-medium text-foreground whitespace-nowrap">
+                            {user.username}
+                          </td>
+                          <td className="px-5 py-4 text-center"><PermissionToggle user={user} field="can_manage_products" /></td>
+                          <td className="px-5 py-4 text-center"><PermissionToggle user={user} field="can_manage_auto_reorder" /></td>
+                          <td className="px-5 py-4 text-center"><PermissionToggle user={user} field="can_manage_stock_movements" /></td>
+                          <td className="px-5 py-4 text-center"><PermissionToggle user={user} field="can_manage_warehouses" /></td>
+                          <td className="px-5 py-4 text-center"><PermissionToggle user={user} field="can_view_activity_logs" /></td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* แท็บ History */}
+          {activeTab === "history" && isSuperuser && (
+            <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden flex flex-col">
+              <div className="px-5 py-4 border-b border-border bg-muted/20">
+                <h2 className="font-semibold text-foreground">System Audit Log</h2>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm table-auto">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/50">
+                      <th className="px-5 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Time</th>
+                      <th className="px-5 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">User</th>
+                      <th className="px-5 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {historyLoading ? (
                       <tr>
-                        <td
-                          colSpan={3}
-                          className="px-5 py-10 text-center text-muted-foreground"
-                        >
-                          <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
-                          Loading history...
+                        <td colSpan={3} className="px-5 py-10 text-center text-muted-foreground">
+                          <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" /> Loading history...
                         </td>
                       </tr>
-                    ) : isError ? (
+                    ) : historyError ? (
                       <tr>
-                        <td
-                          colSpan={3}
-                          className="px-5 py-10 text-center text-destructive"
-                        >
+                        <td colSpan={3} className="px-5 py-10 text-center text-destructive">
                           Failed to load history.
                         </td>
                       </tr>
                     ) : !logs || logs.length === 0 ? (
                       <tr>
-                        <td
-                          colSpan={3}
-                          className="px-5 py-10 text-center text-muted-foreground"
-                        >
+                        <td colSpan={3} className="px-5 py-10 text-center text-muted-foreground">
                           No activity logs found.
                         </td>
                       </tr>
                     ) : (
                       logs.map((log) => (
-                        <tr
-                          key={log.id}
-                          className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
-                        >
+                        <tr key={log.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                           <td className="px-5 py-3 text-muted-foreground whitespace-nowrap">
                             {new Date(log.timestamp).toLocaleString()}
                           </td>
@@ -147,36 +238,9 @@ export default function SettingsPage() {
                               .split(/(update[a-z]*|delete[a-z]*|create[a-z]*|add[a-z]*)/i)
                               .map((part, index) => {
                                 const lowerPart = part.toLowerCase();
-
-                                // สีของDelete
-                                if (lowerPart.startsWith("delete")) {
-                                  return (
-                                    <span key={index} className="text-red-500 font-medium">
-                                      {part}
-                                  </span>
-                                  );
-                                }
-                                // สีของUpdate
-                                if (lowerPart.startsWith("update")) {
-                                  return (
-                                    <span key={index} className="text-amber-500 font-medium">
-                                      {part}
-                                    </span>
-                                  );
-                                }
-                                // สีของ Create หรือ Add
-                                if (
-                                  lowerPart.startsWith("create") ||
-                                  lowerPart.startsWith("add")
-                                ) {
-                                  return (
-                                    <span key={index} className="text-emerald-500 font-medium">
-                                      {part}
-                                    </span>
-                                  );
-                                }
-
-                                // else
+                                if (lowerPart.startsWith("delete")) return <span key={index} className="text-red-500 font-medium">{part}</span>;
+                                if (lowerPart.startsWith("update")) return <span key={index} className="text-amber-500 font-medium">{part}</span>;
+                                if (lowerPart.startsWith("create") || lowerPart.startsWith("add")) return <span key={index} className="text-emerald-500 font-medium">{part}</span>;
                                 return <span key={index}>{part}</span>;
                               })}
                           </td>
@@ -187,11 +251,9 @@ export default function SettingsPage() {
                 </table>
               </div>
 
-              {/* ส่วน Pagination */}
+              {/* ส่วน Pagination ของ History */}
               <div className="px-5 py-4 border-t border-border flex items-center justify-between text-sm bg-card">
-                <span className="text-muted-foreground">
-                  Showing page {page}
-                </span>
+                <span className="text-muted-foreground">Showing page {page}</span>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setPage((p) => Math.max(1, p - 1))}

@@ -5,11 +5,12 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.core.exceptions import ValidationError
 from .services import perform_stock_transaction
-from .serializers import StockBalanceSerializer, StockTransactionSerializer, StockmovementSerializer, ProductSerializer, WarehouseSerializer, CustomTokenObtainPairSerializer, ActivityLogSerializer
-from .models import Product, StockBalance, Warehouse, StockTransaction, ActivityLog
+from .serializers import StockBalanceSerializer, StockTransactionSerializer, StockmovementSerializer, ProductSerializer, WarehouseSerializer, CustomTokenObtainPairSerializer, ActivityLogSerializer, UserSerializer
+from .models import Product, StockBalance, Warehouse, StockTransaction, ActivityLog, Category, UserProfile
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework import generics
+from django.contrib.auth.models import User
 
 #การเคลื่อนไหวของสินค้าในคลัง เช่น รับสินค้าเข้าคลัง, เบิกสินค้า, ปรับยอดคงเหลือ
 class StockMovementAPIView(APIView):
@@ -50,6 +51,12 @@ class ProductListAPIView(generics.ListCreateAPIView):
         if self.request.query_params.get('all') == 'true':
             return None
         return super().paginate_queryset(queryset)
+    def perform_create(self, serializer):
+        product = serializer.save()
+        activity_log = ActivityLog.objects.create(
+            user=self.request.user, 
+            action=f"Created product: {product.name} (SKU: {product.sku})")
+        print(f"สร้างสินค้า: {product.name}")
 
 #รายละเอียดสินค้าและแก้ไขข้อมูลสินค้า(เช่น ชื่อ, หมวดหมู่, ราคาต้นทุน) และลบสินค้า(ทำให้ is_active = False)
 class ProductDetailAPIView(APIView):
@@ -162,3 +169,27 @@ class ActivityLogListView(generics.ListAPIView):
     queryset = ActivityLog.objects.all()
     serializer_class = ActivityLogSerializer
     permission_classes = [IsAuthenticated]
+
+class UserManagementAPIView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        users = User.objects.all().order_by('id')
+        serializer = UserSerializer(users, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+class UserDetailManagementAPIView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def patch(self, request, user_id):
+        try:
+            user = User.objects.get(id=user_id)
+            profile, _ = UserProfile.objects.get_or_create(user=user)
+            for key, value in request.data.items():
+                if hasattr(profile, key):
+                    setattr(profile, key, value)
+            profile.save()
+            serializer = UserSerializer(user)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except User.DoesNotExist:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
