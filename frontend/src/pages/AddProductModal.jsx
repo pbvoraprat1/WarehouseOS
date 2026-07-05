@@ -14,7 +14,7 @@ const productSchema = z.object({
     base_price: z.coerce.number().min(0.01, "Price must be greater than 0"),
     reorder_level: z.coerce.number().min(0, "Reorder level cannot be negative")
 })
-export default function AddProductModal({ isOpen, onClose }) {
+export default function AddProductModal({ isOpen, onClose, canManageReorderLevel = true }) {
     const queryClient = useQueryClient();
     //React Hook Form
     const {
@@ -141,12 +141,15 @@ export default function AddProductModal({ isOpen, onClose }) {
                                 {errors.base_price && <span className="text-xs text-red-500">{errors.base_price.message}</span>}
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-sm font-medium text-foreground">Reorder Level *</label>
+                                <label className="text-sm font-medium text-foreground">
+                                    Reorder Level * {!canManageReorderLevel && <span className="text-muted-foreground font-normal text-xs">(Admin only)</span>}
+                                </label>
                                 <input
                                     type="number"
                                     {...register("reorder_level")}
-                                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    className={`w-full rounded-md border border-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 ${!canManageReorderLevel ? 'bg-muted/50 text-muted-foreground cursor-not-allowed' : 'bg-background'}`}
                                     placeholder="จุดสั่งซื้อ"
+                                    disabled={!canManageReorderLevel}
                                 />
                                 {errors.reorder_level && <span className="text-xs text-red-500">{errors.reorder_level.message}</span>}
                             </div>

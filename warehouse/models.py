@@ -78,7 +78,8 @@ class ActivityLog(models.Model):
         return f"{self.user} - {self.action} - {self.timestamp.strftime('%Y-%m-%d %H:%M')}"
     class Meta:
         ordering = ['-timestamp']
-
+        
+#Model สำหรับจัดการสิทธิ์ผู้ใช้
 class UserProfile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profile')
     can_manage_warehouses = models.BooleanField(default=False, verbose_name="สิทธิ์จัดการคลังสินค้า (Action)")
@@ -95,4 +96,4 @@ def create_user_profile(sender, instance, created, **kwargs):
         UserProfile.objects.create(user=instance)
 @receiver(models.signals.post_save, sender=settings.AUTH_USER_MODEL)
 def save_user_profile(sender, instance, **kwargs):
-    instance.profile.save()
+        instance.profile.save()

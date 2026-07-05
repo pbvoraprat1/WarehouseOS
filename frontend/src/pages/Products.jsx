@@ -3,7 +3,7 @@ import { Search, Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { useQuery, useMutation, useQueryClient, QueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getPaginatedProducts, DeleteProduct, UpdateProduct } from "../lib/api";
 import AddProductModal from "./AddProductModal";
 import EditProductModal from "./EditProductModel";
@@ -12,12 +12,22 @@ export default function Products() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // รีเฟรชข้อมูลอัตโนมัติหลังจากมีการเปลี่ยนแปลง เช่น ลบหรือแก้ไขสินค้า
+  const queryClient = useQueryClient();
+
+  // เช็คสิทธิ์ผู้ใช้จาก LocalStorage
   const isSuperuser = localStorage.getItem("is_superuser") === "true";
-  //ฟังชั่นสำหรับลบ
+  const canManageProducts = localStorage.getItem("can_manage_products") === "true";
+  const hasProductAccess = isSuperuser || canManageProducts;
+  const canManageReorderLevel = localStorage.getItem("can_manage_auto_reorder") === "true";
+
+  // ฟังชั่นสำหรับลบ
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
   const [confirmInput, setConfirmInput] = useState("");
-  //ฟังชั่นสำหรับแก้ไข
+
+  // ฟังชั่นสำหรับแก้ไข
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [productToUpdate, setProductToUpdate] = useState(null);
 
@@ -34,8 +44,9 @@ export default function Products() {
       toast.error("Failed to delete");
     },
   });
+
   const UpdateMutation = useMutation({
-    mutationFn: ({id,payload}) => UpdateProduct({ id, payload }),
+    mutationFn: ({ id, payload }) => UpdateProduct({ id, payload }),
     onSuccess: () => {
       toast.success("Product updated successfully!");
       setIsEditModalOpen(false);
@@ -51,7 +62,7 @@ export default function Products() {
     queryKey: ["products", page],
     queryFn: () => getPaginatedProducts(page),
   });
-
+  // สำหรับ page
   const products = data?.results || data || [];
   const hasNext = !!data?.next;
   const hasPrevious = !!data?.previous;
@@ -74,12 +85,16 @@ export default function Products() {
             Manage your product catalog and inventory levels.
           </p>
         </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-90 transition-opacity"
-        >
-          <Plus className="h-4 w-4" /> Add New Product
-        </button>
+
+        {/* Add New Product (ซ่อนปุ่มถ้าไม่มีสิทธิ์) */}
+        {hasProductAccess && (
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-90 transition-opacity"
+          >
+            <Plus className="h-4 w-4" /> Add New Product
+          </button>
+        )}
       </div>
 
       {/* Search */}
@@ -114,7 +129,8 @@ export default function Products() {
                   {h}
                 </th>
               ))}
-              {isSuperuser && (
+              {/* Action (ซ่อนหัวตารางถ้าไม่มีสิทธิ์) */}
+              {hasProductAccess && (
                 <th className="px-5 py-3 text-left font-medium text-muted-foreground whitespace-nowrap w-auto">
                   Action
                 </th>
@@ -125,7 +141,7 @@ export default function Products() {
             {isLoading ? (
               <tr>
                 <td
-                  colSpan={isSuperuser ? 7 : 6}
+                  colSpan={hasProductAccess ? 7 : 6} // ปรับความกว้างคอลัมน์อัตโนมัติ
                   className="px-5 py-10 text-center text-muted-foreground"
                 >
                   <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
@@ -135,7 +151,7 @@ export default function Products() {
             ) : isError ? (
               <tr>
                 <td
-                  colSpan={isSuperuser ? 7 : 6}
+                  colSpan={hasProductAccess ? 7 : 6}
                   className="px-5 py-10 text-center text-destructive"
                 >
                   Error loading products. Please try again later.
@@ -144,7 +160,7 @@ export default function Products() {
             ) : filtered.length === 0 ? (
               <tr>
                 <td
-                  colSpan={isSuperuser ? 7 : 6}
+                  colSpan={hasProductAccess ? 7 : 6}
                   className="px-5 py-10 text-center text-muted-foreground"
                 >
                   No products found.
@@ -187,7 +203,9 @@ export default function Products() {
                   <td className="px-5 py-3 text-muted-foreground">
                     {p.reorder_level}
                   </td>
-                  {isSuperuser && (
+
+                  {/* Action (ซ่อนปุ่มถ้าไม่มีสิทธิ์) */}
+                  {hasProductAccess && (
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-1">
                         <button
@@ -239,10 +257,13 @@ export default function Products() {
         </div>
       </div>
 
+      {/* Modals */}
       <AddProductModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
+        canManageReorderLevel={isSuperuser || canManageReorderLevel}
       />
+
       {/* Edit Product Modal */}
       {isEditModalOpen && productToUpdate && (
         <EditProductModal
@@ -253,14 +274,18 @@ export default function Products() {
           }}
           product={productToUpdate}
           onSubmit={(updatedData) => {
-            UpdateMutation.mutate({ 
+            UpdateMutation.mutate({
               id: productToUpdate.id,
-              payload: updatedData });
+              payload: updatedData
+            });
           }}
           isLoading={UpdateMutation.isPending}
           error={UpdateMutation.error}
+          canManageReorderLevel={isSuperuser || canManageReorderLevel}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
       {isDeleteModalOpen && productToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-xl bg-card p-6 shadow-lg border border-border">
@@ -289,7 +314,7 @@ export default function Products() {
               <button
                 onClick={() => {
                   setIsDeleteModalOpen(false);
-                  setConfirmInput(""); // ล้างค่าเผื่อเปิดรอบหน้า
+                  setConfirmInput("");
                   setProductToDelete(null);
                 }}
                 className="px-4 py-2 rounded-lg text-sm font-medium border border-border hover:bg-muted transition-colors"
@@ -306,9 +331,6 @@ export default function Products() {
                   deleteMutation.mutate(
                     productToDelete.id || productToDelete.sku,
                   );
-
-                  setIsDeleteModalOpen(false);
-                  setConfirmInput("");
                 }}
                 className="px-4 py-2 rounded-lg text-sm font-medium bg-destructive text-destructive-foreground hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >

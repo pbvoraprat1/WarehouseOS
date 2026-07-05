@@ -39,6 +39,11 @@ export default function Login() {
       localStorage.setItem('is_superuser', response.data.is_superuser);
       localStorage.setItem('username', username);
       const isSuperuser = localStorage.getItem('is_superuser') === 'true';
+      localStorage.setItem('can_manage_products', response.data.can_manage_products);
+      localStorage.setItem('can_manage_auto_reorder', response.data.can_manage_auto_reorder);
+      localStorage.setItem('can_manage_stock_movements', response.data.can_manage_stock_movements);
+      localStorage.setItem('can_manage_warehouses', response.data.can_manage_warehouses);
+      localStorage.setItem('can_view_activity_logs', response.data.can_view_activity_logs);
 
       // 3. พาไปหน้า Dashboard
       navigate("/");

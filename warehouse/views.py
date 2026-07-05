@@ -154,14 +154,62 @@ class LowStockAlertAPIView(APIView):
             "recent_transactions": transactions_data,
         },  status=status.HTTP_200_OK)
 
-class WarehouseListAPIView(APIView):
+class WarehouseListAPIView(generics.ListCreateAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = WarehouseSerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        return Warehouse.objects.filter(is_active=True)
+        
+    def perform_create(self, serializer):
+        warehouse = serializer.save()
+        ActivityLog.objects.create(
+            user=self.request.user, 
+            action=f"Created warehouse: {warehouse.name} (Code: {warehouse.code})"
+        )
+        print(f"สร้างคลังสินค้า: {warehouse.name}")
+
+class WarehouseDetailAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
-        warehouses = Warehouse.objects.filter(is_active=True)
-        serializer = WarehouseSerializer(warehouses, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+    def has_warehouse_permission(self, user):
+        profile = getattr(user, 'profile', None)
+        return user.is_superuser or (profile and profile.can_manage_warehouses)
 
+    def put(self, request, warehouse_id):
+        if not self.has_warehouse_permission(request.user):
+            return Response({"error": "ไม่ได้รับอนุญาตให้แก้ไขคลังสินค้า"}, status=status.HTTP_403_FORBIDDEN)
+        
+        try:
+            warehouse = Warehouse.objects.get(id=warehouse_id, is_active=True)
+            serializer = WarehouseSerializer(warehouse, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                ActivityLog.objects.create(
+                    user=request.user,
+                    action=f"Updated warehouse: {warehouse.name} (Code: {warehouse.code})"
+                )
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Warehouse.DoesNotExist:
+            return Response({"error": "ไม่พบคลังสินค้า"}, status=status.HTTP_404_NOT_FOUND)
+
+    def delete(self, request, warehouse_id):
+        if not self.has_warehouse_permission(request.user):
+            return Response({"error": "ไม่มีสิทธิ์ลบคลังสินค้า"}, status=status.HTTP_403_FORBIDDEN)
+            
+        try:
+            warehouse = Warehouse.objects.get(id=warehouse_id, is_active=True)
+            warehouse.is_active = False
+            warehouse.save()
+            ActivityLog.objects.create(
+                user=request.user,
+                action=f"Deleted warehouse: {warehouse.name} (Code: {warehouse.code})"
+            )
+            return Response({"message": "ลบคลังสินค้าสำเร็จ"}, status=status.HTTP_200_OK)
+        except Warehouse.DoesNotExist:
+            return Response({"error": "ไม่พบคลังสินค้า"}, status=status.HTTP_404_NOT_FOUND)
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
@@ -193,3 +241,56 @@ class UserDetailManagementAPIView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         except User.DoesNotExist:
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+class CustomTokenRefreshView(TokenRefreshView):
+    serializer_class = CustomTokenObtainPairSerializer
+
+#HardDeleteData
+class HardDeleteData(APIView):
+    permission_classes = [IsAdminUser]
+    def delete(self, request):
+        # รับประเภทข้อมูลที่จะลบ
+        delete_type = request.data.get('type')
+        try:
+            if delete_type == 'products':
+                # ลบเฉพาะที่อยู่ในถังขยะ (is_active=False)
+                deleted_count, _ = Product.objects.filter(is_active=False).delete()
+                action_text = f"Hard deleted {deleted_count} inactive products"
+            elif delete_type == 'warehouses':
+                # ลบเฉพาะที่อยู่ในถังขยะ (is_active=False)
+                deleted_count, _ = Warehouse.objects.filter(is_active=False).delete()
+                action_text = f"Hard deleted {deleted_count} inactive warehouses"
+            else:
+                return Response({"error": "Invalid delete type"}, status=status.HTTP_400_BAD_REQUEST)
+            # บันทึกประวัติลง Activity Log ถ้ามีการลบเกิดขึ้น
+            if deleted_count > 0:
+                ActivityLog.objects.create(
+                    user=request.user,
+                    action=action_text
+                )
+            return Response({
+                "message": f"Successfully deleted {deleted_count} items permanently.", 
+                "deleted_count": deleted_count
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+#API สำหรับ หน้ารายละเอียดสินค้าคงเหลือในคลัง
+class WarehouseProductsAPIView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = StockBalanceSerializer
+    def get_queryset(self):
+        warehouse_id = self.kwargs['warehouse_id']
+        queryset = StockBalance.objects.filter(
+            warehouse_id=warehouse_id,
+            product__is_active=True
+        ).select_related('product').order_by('-last_updated')
+        
+        search_query = self.request.query_params.get('search', None)
+        if search_query:
+            from django.db.models import Q
+            queryset = queryset.filter(
+                Q(product__name__icontains=search_query) | 
+                Q(product__sku__icontains=search_query)
+            )
+            
+        return queryset

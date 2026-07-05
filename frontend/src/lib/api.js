@@ -19,6 +19,11 @@ export const getWarehouses = async () => {
     const response = await api.get('/warehouse/list/');
     return response.data.results || response.data;
 };
+// เพิ่มคลังสินค้าใหม่
+export const createWarehouse = async (data) => {
+    const response = await api.post('/warehouse/list/', data);
+    return response.data;
+};
 // ดึงข้อมูลสินค้าสำหรับลบ
 export const DeleteProduct = async (id) => {
     const response = await api.delete(`/warehouse/products/${id}/`)
@@ -44,3 +49,36 @@ export const updateUserPermission = async (userId, data) => {
     const response = await api.patch(`/warehouse/users/${userId}/`, data);
     return response.data;
 }
+
+// สำหรับสร้างรายการ Stock Movement
+export const createStockMovement = async (data) => {
+    try {
+        const response = await api.post('/warehouse/stock-movements/', data);
+        return response.data;
+    } catch (error) {
+        throw new Error(error.response?.data?.error || "เกิดข้อผิดพลาดในการบันทึกข้อมูล");
+    }
+};
+
+// อัปเดตข้อมูลคลัง
+export const UpdateWarehouse = async ({ id, payload }) => {
+    const response = await api.put(`/warehouse/list/${id}/`, payload);
+    return response.data;
+};
+// ลบคลัง
+export const DeleteWarehouse = async (id) => {
+    const response = await api.delete(`/warehouse/list/${id}/`)
+    return response.data;
+};
+// ฟังก์ชันลบข้อมูลถาวร (Hard Delete)
+export const hardDeleteData = async (type) => {
+    const response = await api.delete('/warehouse/hard-delete/', {
+        data: { type }
+    });
+    return response.data;
+};
+// สำหรับดึงรายการสินค้าคงเหลือในคลัง
+export const getWarehouseProducts = async (warehouseId, page = 1, search = "") => {
+    const response = await api.get(`/warehouse/list/${warehouseId}/products/?page=${page}&search=${search}`);
+    return response.data;
+};

@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Settings, History, Users, Loader2 } from "lucide-react";
+import { Settings, History, Users, Loader2, AlertTriangle, Trash2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getActivityLogs, getAllUsers, updateUserPermission } from "../lib/api";
+import { getActivityLogs, getAllUsers, updateUserPermission, hardDeleteData } from "../lib/api";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -38,6 +38,18 @@ export default function SettingsPage() {
       toast.error("เกิดข้อผิดพลาดในการอัปเดตสิทธิ์");
       console.error(error);
     },
+  });
+  // Mutation สำหรับ hard delete
+  const hardDeleteMutation = useMutation({
+    mutationFn: (type) => hardDeleteData(type),
+    onSuccess: (data) => {
+      toast.success(data.message);
+      queryClient.invalidateQueries({ queryKey: ["activityLogs", page] });
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.error || "Hard delete failed.");
+      console.error(error);
+    }
   });
 
   // ฟังก์ชันสำหรับ toggle permission
@@ -131,6 +143,18 @@ export default function SettingsPage() {
               >
                 <History className="h-4 w-4" />
                 Activity History
+              </button>
+              <button
+                onClick={() => setActiveTab("danger")}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left mt-4",
+                  activeTab === "danger"
+                    ? "bg-red-500/10 text-red-600"
+                    : "text-red-500/70 hover:bg-red-500/10 hover:text-red-600"
+                )}
+              >
+                <AlertTriangle className="h-4 w-4" />
+                Danger Zone
               </button>
             </>
           )}
@@ -251,6 +275,9 @@ export default function SettingsPage() {
                 </table>
               </div>
 
+
+
+
               {/* ส่วน Pagination ของ History */}
               <div className="px-5 py-4 border-t border-border flex items-center justify-between text-sm bg-card">
                 <span className="text-muted-foreground">Showing page {page}</span>
@@ -269,6 +296,63 @@ export default function SettingsPage() {
                   >
                     Next
                   </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* แท็บ Danger Zone */}
+          {activeTab === "danger" && isSuperuser && (
+            <div className="rounded-xl border border-red-500/30 bg-card shadow-sm overflow-hidden flex flex-col animate-in fade-in">
+              <div className="px-5 py-4 border-b border-red-500/30 bg-red-500/5">
+                <h2 className="font-semibold text-red-600 flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5" /> Danger Zone
+                </h2>
+              </div>
+              <div className="p-6 space-y-6">
+                <p className="text-sm text-muted-foreground">
+                  The actions below will <strong>permanently delete</strong> data from the database. This cannot be undone.
+                  (Only items currently in the recycle bin / `is_active = False` will be removed.)
+                </p>
+
+                <div className="space-y-4">
+                  {/* ลบ Product */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg border border-border bg-muted/20">
+                    <div>
+                      <h3 className="font-medium text-foreground">Empty Deleted Products</h3>
+                      <p className="text-xs text-muted-foreground">Permanently wipe all products that have been soft-deleted.</p>
+                    </div>
+                    <button
+                      disabled={hardDeleteMutation.isPending}
+                      onClick={() => {
+                        if (window.confirm("Are you completely sure? This action cannot be reversed!")) {
+                          hardDeleteMutation.mutate("products");
+                        }
+                      }}
+                      className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-red-600 bg-red-100 rounded-md hover:bg-red-200 transition-colors disabled:opacity-50 whitespace-nowrap"
+                    >
+                      <Trash2 className="h-4 w-4" /> Clear Products
+                    </button>
+                  </div>
+
+                  {/* ลบ Warehouse */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg border border-border bg-muted/20">
+                    <div>
+                      <h3 className="font-medium text-foreground">Empty Deleted Warehouses</h3>
+                      <p className="text-xs text-muted-foreground">Permanently wipe all warehouses that have been soft-deleted.</p>
+                    </div>
+                    <button
+                      disabled={hardDeleteMutation.isPending}
+                      onClick={() => {
+                        if (window.confirm("Are you completely sure? This action cannot be reversed!")) {
+                          hardDeleteMutation.mutate("warehouses");
+                        }
+                      }}
+                      className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-red-600 bg-red-100 rounded-md hover:bg-red-200 transition-colors disabled:opacity-50 whitespace-nowrap"
+                    >
+                      <Trash2 className="h-4 w-4" /> Clear Warehouses
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

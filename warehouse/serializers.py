@@ -18,7 +18,9 @@ class WarehouseSerializer(serializers.ModelSerializer):
 #API สำหรับแสดงยอดคงเหลือสินค้าในคลัง
 class StockBalanceSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.name', read_only=True)
-
+    product_sku = serializers.CharField(source='product.sku', read_only=True)
+    category_name = serializers.CharField(source='product.category.name', read_only=True)
+    product_is_active = serializers.BooleanField(source='product.is_active', read_only=True)
     class Meta:
         model = StockBalance
         fields = '__all__'
@@ -88,6 +90,18 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         data = super().validate(attrs)
         data['is_superuser'] = self.user.is_superuser
         data['username'] = self.user.username
+        
+        try:
+            profile = self.user.profile
+        except Exception:
+            profile = None
+            
+        data['can_manage_products'] = profile.can_manage_products if profile else False
+        data['can_manage_auto_reorder'] = profile.can_manage_auto_reorder if profile else False
+        data['can_manage_stock_movements'] = profile.can_manage_stock_movements if profile else False
+        data['can_manage_warehouses'] = profile.can_manage_warehouses if profile else False
+        data['can_view_activity_logs'] = profile.can_view_activity_logs if profile else False
+        
         return data
     
 class ActivityLogSerializer(serializers.ModelSerializer):

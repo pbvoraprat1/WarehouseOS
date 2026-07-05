@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { UpdateProduct } from "../lib/api";
 
-export default function EditProductModal({ isOpen, onClose, product }) {
+export default function EditProductModal({ isOpen, onClose, product, canManageReorderLevel = true }) {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     sku: "",
@@ -128,7 +128,7 @@ export default function EditProductModal({ isOpen, onClose, product }) {
             {/* Reorder Level */}
             <div className="space-y-1">
               <label className="text-sm font-medium text-foreground">
-                Reorder Level
+                Reorder Level {!canManageReorderLevel && <span className="text-muted-foreground font-normal text-xs">(Admin only)</span>}
               </label>
               <input
                 type="number"
@@ -140,8 +140,9 @@ export default function EditProductModal({ isOpen, onClose, product }) {
                     reorder_level: parseInt(e.target.value, 10),
                   })
                 }
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                className={`w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 ${!canManageReorderLevel ? 'bg-muted/50 text-muted-foreground cursor-not-allowed' : 'bg-background'}`}
                 required
+                disabled={!canManageReorderLevel}
               />
             </div>
             

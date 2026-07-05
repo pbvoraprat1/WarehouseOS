@@ -4,8 +4,7 @@ import { cn } from "@/lib/utils";
 import { StatusBadge } from "@/components/StatusBadge";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "@/lib/axios";
-import { getAllProducts, getWarehouses } from "@/lib/api";
+import { getAllProducts, getWarehouses, createStockMovement } from "@/lib/api";
 
 export default function StockMovements() {
   const queryClient = useQueryClient();
@@ -23,29 +22,21 @@ export default function StockMovements() {
     queryFn: () => getAllProducts(),
   });
 
-
   // Fetch Warehouses
   const { data: warehouses = [] } = useQuery({
     queryKey: ["warehouses"],
     queryFn: () => getWarehouses(),
   });
 
-  // Mutation for creating transaction
+  // Mutation for creating transaction (ย้าย API ไปไว้ที่ lib/api.js แล้ว)
   const mutation = useMutation({
-    mutationFn: async (data) => {
-      try {
-        const response = await api.post('/warehouse/stock-movements/', {
-          product_id: data.productId,
-          warehouse_id: data.warehouseId,
-          transaction_type: data.type,
-          quantity: parseInt(data.quantity),
-          reference_document: data.reference || "",
-        });
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.error || "เกิดข้อผิดพลาดในการบันทึกข้อมูล");
-      }
-    },
+    mutationFn: (data) => createStockMovement({
+      product_id: data.productId,
+      warehouse_id: data.warehouseId,
+      transaction_type: data.type,
+      quantity: parseInt(data.quantity),
+      reference_document: data.reference || "",
+    }),
     onSuccess: (data) => {
       toast.success(data.message || `Transaction recorded successfully`);
       setForm({
@@ -74,9 +65,14 @@ export default function StockMovements() {
     mutation.mutate(form);
   };
 
+  // สำหรับ disabled ให้ดูจางลงและกดไม่ได้
   const inputClass =
-    "w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-ring/40 transition-shadow";
+    "w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-ring/40 transition-shadow disabled:opacity-50 disabled:bg-muted/50 disabled:cursor-not-allowed";
   const labelClass = "block text-sm font-medium text-foreground mb-1.5";
+
+  // เช็คสิทธิ์ผู้ใช้
+  const isSuperuser = localStorage.getItem('is_superuser') === 'true';
+  const canCreateTransaction = isSuperuser || localStorage.getItem('can_manage_stock_movements') === 'true';
 
   return (
     <div className="space-y-6">
@@ -106,6 +102,7 @@ export default function StockMovements() {
             <div>
               <label className={labelClass}>Product *</label>
               <select
+                disabled={!canCreateTransaction} // ล็อคถ้าไม่มีสิทธิ์
                 value={form.productId}
                 onChange={(e) =>
                   setForm({ ...form, productId: e.target.value })
@@ -123,6 +120,7 @@ export default function StockMovements() {
             <div>
               <label className={labelClass}>Warehouse *</label>
               <select
+                disabled={!canCreateTransaction} // ล็อคถ้าไม่มีสิทธิ์
                 value={form.warehouseId}
                 onChange={(e) =>
                   setForm({ ...form, warehouseId: e.target.value })
@@ -146,16 +144,17 @@ export default function StockMovements() {
                 <button
                   key={t}
                   type="button"
+                  disabled={!canCreateTransaction} // ล็อคถ้าไม่มีสิทธิ์
                   onClick={() => setForm({ ...form, type: t })}
                   className={cn(
-                    "flex-1 rounded-lg border px-4 py-2.5 text-sm font-medium transition-all",
+                    "flex-1 rounded-lg border px-4 py-2.5 text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed",
                     form.type === t
                       ? t === "IN"
                         ? "border-success bg-success/10 text-success"
                         : t === "OUT"
                           ? "border-destructive bg-destructive/10 text-destructive"
                           : "border-primary bg-primary/10 text-primary"
-                      : "border-border bg-card text-muted-foreground hover:bg-muted",
+                      : "border-border bg-card text-muted-foreground hover:bg-muted"
                   )}
                 >
                   {t === "IN"
@@ -174,6 +173,7 @@ export default function StockMovements() {
               <input
                 type="number"
                 min="1"
+                disabled={!canCreateTransaction} // ล็อคถ้าไม่มีสิทธิ์
                 value={form.quantity}
                 onChange={(e) => setForm({ ...form, quantity: e.target.value })}
                 placeholder="Enter quantity"
@@ -184,6 +184,7 @@ export default function StockMovements() {
               <label className={labelClass}>Reference Document</label>
               <input
                 type="text"
+                disabled={!canCreateTransaction} // ล็อคถ้าไม่มีสิทธิ์
                 value={form.reference}
                 onChange={(e) =>
                   setForm({ ...form, reference: e.target.value })
@@ -193,15 +194,23 @@ export default function StockMovements() {
               />
             </div>
           </div>
-
-          <button
-            type="submit"
-            disabled={mutation.isPending}
-            className="w-full flex justify-center items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50"
-          >
-            {mutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-            {mutation.isPending ? "Submitting..." : "Submit Transaction"}
-          </button>
+          
+          {!canCreateTransaction && (
+            <div className="p-3 text-sm text-red-500 bg-red-100/10 border border-red-500/50 rounded-md text-center">
+              You do not have permission to create stock transactions.
+            </div>
+          )}
+          
+          {canCreateTransaction && (
+            <button
+              type="submit"
+              disabled={mutation.isPending}
+              className="w-full flex justify-center items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+            >
+              {mutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+              {mutation.isPending ? "Submitting..." : "Submit Transaction"}
+            </button>
+          )}
         </form>
 
         {/* Preview Card */}
