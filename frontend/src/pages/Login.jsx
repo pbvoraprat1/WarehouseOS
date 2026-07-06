@@ -12,8 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-
-import api from "../lib/axios";
+import { loginUser } from "../lib/api";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -28,22 +27,22 @@ export default function Login() {
 
     try {
       // 1. ส่งข้อมูลไปหา Django
-      const response = await api.post('/api/token/', {
+      const data = await loginUser({
         username,
         password
       });
 
       // 2. ถ้าสำเร็จ เก็บ Token
-      localStorage.setItem('access_token', response.data.access);
-      localStorage.setItem('refresh_token', response.data.refresh);
-      localStorage.setItem('is_superuser', response.data.is_superuser);
+      localStorage.setItem('access_token', data.access);
+      localStorage.setItem('refresh_token', data.refresh);
+      localStorage.setItem('is_superuser', data.is_superuser);
       localStorage.setItem('username', username);
       const isSuperuser = localStorage.getItem('is_superuser') === 'true';
-      localStorage.setItem('can_manage_products', response.data.can_manage_products);
-      localStorage.setItem('can_manage_auto_reorder', response.data.can_manage_auto_reorder);
-      localStorage.setItem('can_manage_stock_movements', response.data.can_manage_stock_movements);
-      localStorage.setItem('can_manage_warehouses', response.data.can_manage_warehouses);
-      localStorage.setItem('can_view_activity_logs', response.data.can_view_activity_logs);
+      localStorage.setItem('can_manage_products', data.can_manage_products);
+      localStorage.setItem('can_manage_auto_reorder', data.can_manage_auto_reorder);
+      localStorage.setItem('can_manage_stock_movements', data.can_manage_stock_movements);
+      localStorage.setItem('can_manage_warehouses', data.can_manage_warehouses);
+      localStorage.setItem('can_view_activity_logs', data.can_view_activity_logs);
 
       // 3. พาไปหน้า Dashboard
       navigate("/");

@@ -10,21 +10,21 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import api from "../lib/axios";
+import { getDashboardData, getAllWarehouse } from "../lib/api";
 // สำหรับข้อมูลใน Dashboard หลัก
 export default function Dashboard() {
   const [selectedWarehouseId, setSelectedWarehouseId] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   // ==========================================
-  // 3. React Query สำหรับดึงข้อมูล
+  // React Query สำหรับดึงข้อมูล
   // ==========================================
 
-  // 3.1 ดึงรายชื่อคลังสินค้าทั้งหมด
+  // ดึงรายชื่อคลังสินค้าทั้งหมด
   const { data: warehouseList = [], isLoading: isLoadingWarehouses } = useQuery(
     {
       queryKey: ["warehouses"],
       queryFn: async () => {
-        const response = await api.get('/warehouse/list/');
-        const data = response.data;
+        const data = await getAllWarehouse();
 
         // เลือกคลังแรกอัตโนมัติถ้ายังไม่ได้เลือก
         if (data.length > 0 && !selectedWarehouseId) {
@@ -35,7 +35,7 @@ export default function Dashboard() {
     },
   );
 
-  // 3.2 ดึงข้อมูล Dashboard เมื่อมีการเลือกคลังแล้ว
+  // ดึงข้อมูล Dashboard เมื่อมีการเลือกคลังแล้ว
   const {
     data: dbData,
     isLoading: isLoadingDashboard,
@@ -43,8 +43,7 @@ export default function Dashboard() {
   } = useQuery({
     queryKey: ["dashboard", selectedWarehouseId],
     queryFn: async () => {
-      const response = await api.get(`/warehouse/dashboard/${selectedWarehouseId}/`);
-      return response.data;
+      return await getDashboardData(selectedWarehouseId);
     },
     enabled: !!selectedWarehouseId, // query จะรันก็ต่อเมื่อมีค่า selectedWarehouseId
   });
@@ -52,7 +51,7 @@ export default function Dashboard() {
   const isLoading = isLoadingWarehouses || isLoadingDashboard;
 
   // ==========================================
-  // 4. การแสดงผลกรณี Loading หรือ Error
+  // การแสดงผลกรณี Loading หรือ Error
   // ==========================================
   if (isLoading) {
     return (
@@ -82,7 +81,7 @@ export default function Dashboard() {
   }
 
   // ==========================================
-  // 5. การแสดงผล UI หลัก (Render)
+  // การแสดงผล UI หลัก (Render)
   // ==========================================
   return (
     <div className="space-y-6">

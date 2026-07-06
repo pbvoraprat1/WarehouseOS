@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { UpdateWarehouse, getWarehouses } from "../lib/api";
+import { UpdateWarehouse, getAllWarehouse } from "../lib/api";
 
 const warehouseSchema = z.object({
     name: z.string().min(1, "Please enter a warehouse name"),
@@ -38,7 +38,7 @@ export default function EditWarehouseModal({ isOpen, onClose, warehouse }) {
 
     const { data: warehouses = [], isLoading: isLoadingWarehouses } = useQuery({
         queryKey: ["warehouses_detail"],
-        queryFn: () => getWarehouses(),
+        queryFn: () => getAllWarehouse(),
         enabled: isOpen,
     });
 

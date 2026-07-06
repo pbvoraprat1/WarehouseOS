@@ -1,5 +1,5 @@
 from itertools import product
-from django.db.models import F
+from django.db.models import F, Q
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -157,11 +157,27 @@ class LowStockAlertAPIView(APIView):
 class WarehouseListAPIView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = WarehouseSerializer
-    pagination_class = None
+    #สำหรับ pageination
+    def paginate_queryset(self, queryset):
+        if self.request.query_params.get('all') == 'true':
+            return None
+        return super().paginate_queryset(queryset)
 
     def get_queryset(self):
-        return Warehouse.objects.filter(is_active=True)
-        
+        # ดึงคลังสินค้าที่ is_active
+        queryset = Warehouse.objects.filter(is_active=True)
+        # รับค่าคำที่ผู้ใช้พิมพ์ค้นหามาจาก URL (เช่น ?search=Bangkok)
+        search_query = self.request.query_params.get('search', None)
+        # ถ้ามีค่าคำค้นหา ให้กรอง queryset ตามชื่อหรือรหัสคลังสินค้า
+        if search_query:
+            queryset = queryset.filter(
+                Q(name__icontains=search_query) |
+                Q(code__icontains=search_query) |
+                Q(location__icontains=search_query) 
+            )
+        # ถ้าไม่มีค่าคำค้นหา ให้คืน queryset ทั้งหมด
+        return queryset
+    #สำหรับบันทึกประวัติการสร้างคลังสินค้า
     def perform_create(self, serializer):
         warehouse = serializer.save()
         ActivityLog.objects.create(
@@ -169,14 +185,14 @@ class WarehouseListAPIView(generics.ListCreateAPIView):
             action=f"Created warehouse: {warehouse.name} (Code: {warehouse.code})"
         )
         print(f"สร้างคลังสินค้า: {warehouse.name}")
-
+# รายละเอียดคลังสินค้าและแก้ไขข้อมูลคลังสินค้า(เช่น ชื่อ) และลบคลังสินค้า(ทำให้ is_active = False)
 class WarehouseDetailAPIView(APIView):
     permission_classes = [IsAuthenticated]
-
+    #เช็คสิทธการเข้าถึง
     def has_warehouse_permission(self, user):
         profile = getattr(user, 'profile', None)
         return user.is_superuser or (profile and profile.can_manage_warehouses)
-
+    #API สำหรับแก้ไขข้อมูลคลังสินค้า
     def put(self, request, warehouse_id):
         if not self.has_warehouse_permission(request.user):
             return Response({"error": "ไม่ได้รับอนุญาตให้แก้ไขคลังสินค้า"}, status=status.HTTP_403_FORBIDDEN)
@@ -194,7 +210,7 @@ class WarehouseDetailAPIView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Warehouse.DoesNotExist:
             return Response({"error": "ไม่พบคลังสินค้า"}, status=status.HTTP_404_NOT_FOUND)
-
+    #API สำหรับลบคลังสินค้า
     def delete(self, request, warehouse_id):
         if not self.has_warehouse_permission(request.user):
             return Response({"error": "ไม่มีสิทธิ์ลบคลังสินค้า"}, status=status.HTTP_403_FORBIDDEN)
@@ -210,14 +226,18 @@ class WarehouseDetailAPIView(APIView):
             return Response({"message": "ลบคลังสินค้าสำเร็จ"}, status=status.HTTP_200_OK)
         except Warehouse.DoesNotExist:
             return Response({"error": "ไม่พบคลังสินค้า"}, status=status.HTTP_404_NOT_FOUND)
+
+#API สำหรับการเข้าสู่ระบบด้วย JWT Token
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
-
+    
+#API สำหรับแสดงประวัติการทำรายการต่างๆในระบบ เช่น การสร้างสินค้า, การแก้ไขสินค้า, การลบสินค้า, การรับสินค้าเข้าคลัง, การเบิกสินค้าออกจากคลัง
 class ActivityLogListView(generics.ListAPIView):
     queryset = ActivityLog.objects.all()
     serializer_class = ActivityLogSerializer
     permission_classes = [IsAuthenticated]
 
+#API สำหรับการจัดการผู้ใช้งานในระบบ เช่น การแสดงรายการผู้ใช้งานทั้งหมด, การแก้ไขข้อมูลผู้ใช้งาน, การลบผู้ใช้งาน
 class UserManagementAPIView(APIView):
     permission_classes = [IsAdminUser]
 
@@ -225,7 +245,8 @@ class UserManagementAPIView(APIView):
         users = User.objects.all().order_by('id')
         serializer = UserSerializer(users, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
-
+    
+#API สำหรับการแสดงรายละเอียดผู้ใช้งานและแก้ไขข้อมูลผู้ใช้งาน
 class UserDetailManagementAPIView(APIView):
     permission_classes = [IsAdminUser]
 
@@ -242,6 +263,7 @@ class UserDetailManagementAPIView(APIView):
         except User.DoesNotExist:
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
         
+#API สำหรับการรีเฟรช JWT Token       
 class CustomTokenRefreshView(TokenRefreshView):
     serializer_class = CustomTokenObtainPairSerializer
 
@@ -274,6 +296,7 @@ class HardDeleteData(APIView):
             }, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
 #API สำหรับ หน้ารายละเอียดสินค้าคงเหลือในคลัง
 class WarehouseProductsAPIView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]

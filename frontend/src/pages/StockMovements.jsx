@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { StatusBadge } from "@/components/StatusBadge";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getAllProducts, getWarehouses, createStockMovement } from "@/lib/api";
+import { getAllProducts, getAllWarehouse, createStockMovement } from "@/lib/api";
 
 export default function StockMovements() {
   const queryClient = useQueryClient();
@@ -25,7 +25,7 @@ export default function StockMovements() {
   // Fetch Warehouses
   const { data: warehouses = [] } = useQuery({
     queryKey: ["warehouses"],
-    queryFn: () => getWarehouses(),
+    queryFn: () => getAllWarehouse(),
   });
 
   // Mutation for creating transaction (ย้าย API ไปไว้ที่ lib/api.js แล้ว)
