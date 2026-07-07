@@ -240,6 +240,12 @@ while following patterns commonly used in production applications.
 - [ ] Redis + Celery
 - [ ] Notification System
 - [ ] Unit Testing
+- [ ] Change Password (User Profile)
+- [ ] User Search
+- [ ] User Pagination
+- [ ] Soft Delete / Disable User
+- [ ] Improved Activity Log
+- [ ] Better User Management Experience
 
 ---
 
