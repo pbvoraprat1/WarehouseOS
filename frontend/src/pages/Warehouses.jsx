@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MapPin, Package, Loader2, Plus, Edit, Trash2, Search } from "lucide-react";
+import { MapPin, Package, Loader2, Plus, Edit, Trash2, Search, AlertTriangle } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   DeleteWarehouse,
@@ -15,6 +15,7 @@ export default function Warehouses() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingWarehouse, setEditingWarehouse] = useState(null);
   const [viewingWarehouse, setViewingWarehouse] = useState(null);
+  const [deletingWarehouse, setDeletingWarehouse] = useState(null);
 
   const isSuperuser = localStorage.getItem("is_superuser") === "true";
   const canManageWarehouses =
@@ -44,10 +45,12 @@ export default function Warehouses() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["warehouses_detail"] });
       toast.success("Warehouse deleted successfully!");
+      setDeletingWarehouse(null);
     },
     onError: (error) => {
       console.error(error);
       toast.error(error.response?.data?.error || "Failed to delete warehouse");
+      setDeletingWarehouse(null);
     },
   });
 
@@ -137,13 +140,7 @@ export default function Warehouses() {
                         disabled={deleteWarehouseMutation.isPending}
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (
-                            window.confirm(
-                              `Are you sure you want to delete the warehouse "${w.name}"?`
-                            )
-                          ) {
-                            deleteWarehouseMutation.mutate(w.id);
-                          }
+                          setDeletingWarehouse(w);
                         }}
                       >
                         <Trash2 className="w-4 h-4 text-red-500" />
@@ -203,6 +200,44 @@ export default function Warehouses() {
           warehouse={viewingWarehouse}
           onClose={() => setViewingWarehouse(null)}
         />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingWarehouse && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 animate-in fade-in">
+          <div className="bg-card w-full max-w-md rounded-xl shadow-lg border border-red-500/30 overflow-hidden">
+            <div className="px-5 py-4 border-b border-red-500/30 bg-red-500/5">
+              <h2 className="font-semibold text-red-600 flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5" /> Confirm Deletion
+              </h2>
+            </div>
+            <div className="p-5 space-y-4 text-center">
+              <p className="text-sm text-foreground">
+                Are you sure you want to delete the warehouse <strong>"{deletingWarehouse.name}"</strong>?
+              </p>
+              <p className="text-sm text-muted-foreground">
+                This action will mark the warehouse as inactive and remove it from normal views.
+              </p>
+            </div>
+            <div className="px-5 py-4 border-t border-border flex justify-end gap-2 bg-muted/10">
+              <button
+                onClick={() => setDeletingWarehouse(null)}
+                disabled={deleteWarehouseMutation.isPending}
+                className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => deleteWarehouseMutation.mutate(deletingWarehouse.id)}
+                disabled={deleteWarehouseMutation.isPending}
+                className="bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {deleteWarehouseMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                {deleteWarehouseMutation.isPending ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

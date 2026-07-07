@@ -236,15 +236,48 @@ class ActivityLogListView(generics.ListAPIView):
     queryset = ActivityLog.objects.all()
     serializer_class = ActivityLogSerializer
     permission_classes = [IsAuthenticated]
-
+    #ฟังก์ชันสำหรับเช็คสิทธิ์ log
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        has_permission = user.is_superuser
+        # ถ้าไม่ใช่ Superuser ให้ไปเช็คว่าถูกเปิดสิทธิ์ "Logs" ไว้ในหน้า Settings หรือไม่
+        if not has_permission:
+            try:
+                has_permission = user.profile.can_view_activity_logs
+            except Exception:
+                has_permission = False
+        # ถ้าไม่มีสิทธิ์ทั้ง 2 อย่าง ถึงจะบล็อกการเข้าถึง
+        if not has_permission:
+            return Response({"error": "ไม่มีสิทธิ์เข้าถึง Activity Log"}, status=status.HTTP_403_FORBIDDEN)
+            
+        return super().get(request, *args, **kwargs)
+    
 #API สำหรับการจัดการผู้ใช้งานในระบบ เช่น การแสดงรายการผู้ใช้งานทั้งหมด, การแก้ไขข้อมูลผู้ใช้งาน, การลบผู้ใช้งาน
-class UserManagementAPIView(APIView):
+class UserManagementAPIView(generics.GenericAPIView):
     permission_classes = [IsAdminUser]
+    serializer_class = UserSerializer
 
     def get(self, request):
         users = User.objects.all().order_by('id')
         serializer = UserSerializer(users, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        serializer = UserSerializer(data=request.data)
+        if serializer.is_valid():
+            username = request.data.get('username')
+            password = request.data.get('password')
+            if User.objects.filter(username=username).exists():
+                return Response({"error": "ชื่อผู้ใช้งานนี้มีอยู่แล้ว"}, status=status.HTTP_400_BAD_REQUEST)
+            user = User.objects.create_user(username=username, password=password)
+            ActivityLog.objects.create(
+                user=request.user,
+                action=f"Created user: {username} (Code: {user.id})"
+            )
+            return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED) 
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
     
 #API สำหรับการแสดงรายละเอียดผู้ใช้งานและแก้ไขข้อมูลผู้ใช้งาน
 class UserDetailManagementAPIView(APIView):

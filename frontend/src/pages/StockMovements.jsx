@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { StatusBadge } from "@/components/StatusBadge";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getAllProducts, getAllWarehouse, createStockMovement } from "@/lib/api";
+import { getAllProducts, getAllWarehouse, createStockMovement, getStockBalance } from "@/lib/api";
 
 export default function StockMovements() {
   const queryClient = useQueryClient();
@@ -28,6 +28,13 @@ export default function StockMovements() {
     queryFn: () => getAllWarehouse(),
   });
 
+  // Fetch Stock Balance for selected Product & Warehouse
+  const { data: stockBalance, isLoading: isStockLoading } = useQuery({
+    queryKey: ["stockBalance", form.productId, form.warehouseId],
+    queryFn: () => getStockBalance(form.productId, form.warehouseId),
+    enabled: !!form.productId && !!form.warehouseId,
+  });
+
   // Mutation for creating transaction (ย้าย API ไปไว้ที่ lib/api.js แล้ว)
   const mutation = useMutation({
     mutationFn: (data) => createStockMovement({
@@ -48,6 +55,7 @@ export default function StockMovements() {
       });
       // Invalidate products query to update stock in preview
       queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["stockBalance"] });
     },
     onError: (error) => {
       toast.error(error.message);
@@ -194,13 +202,13 @@ export default function StockMovements() {
               />
             </div>
           </div>
-          
+
           {!canCreateTransaction && (
             <div className="p-3 text-sm text-red-500 bg-red-100/10 border border-red-500/50 rounded-md text-center">
               You do not have permission to create stock transactions.
             </div>
           )}
-          
+
           {canCreateTransaction && (
             <button
               type="submit"
@@ -236,10 +244,18 @@ export default function StockMovements() {
                 </p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Current Stock</p>
-                <p className="text-2xl font-semibold text-foreground">
-                  {selectedProduct.total_stock}
+                <p className="text-xs text-muted-foreground">
+                  Current Stock {form.warehouseId ? "(in selected warehouse)" : "(all warehouses)"}
                 </p>
+                <div className="flex items-center gap-2">
+                  <p className="text-2xl font-semibold text-foreground">
+                    {isStockLoading ? (
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground inline" />
+                    ) : (
+                      form.warehouseId ? (stockBalance?.quantity ?? 0) : selectedProduct.total_stock
+                    )}
+                  </p>
+                </div>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Reorder Level</p>
@@ -251,17 +267,17 @@ export default function StockMovements() {
                 <p className="text-xs text-muted-foreground">Status</p>
                 <StatusBadge
                   variant={
-                    selectedProduct.total_stock === 0
+                    (form.warehouseId ? (stockBalance?.quantity ?? 0) : selectedProduct.total_stock) === 0
                       ? "danger"
-                      : selectedProduct.total_stock <=
+                      : (form.warehouseId ? (stockBalance?.quantity ?? 0) : selectedProduct.total_stock) <=
                         selectedProduct.reorder_level
                         ? "warning"
                         : "success"
                   }
                 >
-                  {selectedProduct.total_stock === 0
+                  {(form.warehouseId ? (stockBalance?.quantity ?? 0) : selectedProduct.total_stock) === 0
                     ? "Out of Stock"
-                    : selectedProduct.total_stock <=
+                    : (form.warehouseId ? (stockBalance?.quantity ?? 0) : selectedProduct.total_stock) <=
                       selectedProduct.reorder_level
                       ? "Low Stock"
                       : "In Stock"}

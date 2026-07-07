@@ -1,14 +1,25 @@
 import { useState } from "react";
 import { Settings, History, Users, Loader2, AlertTriangle, Trash2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getActivityLogs, getAllUsers, updateUserPermission, hardDeleteData } from "../lib/api";
+import { getActivityLogs, getAllUsers, updateUserPermission, hardDeleteData, createNewUser } from "../lib/api";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("general");
   const isSuperuser = localStorage.getItem("is_superuser") === "true";
+  const canViewActivityLogs = localStorage.getItem("can_view_activity_logs") === "true";
+  const hasLogAccess = isSuperuser || canViewActivityLogs;
   const queryClient = useQueryClient();
+
+  // State สำหรับ Modal สร้าง User
+  const [isCreateUserModalOpen, setIsCreateUserModalOpen] = useState(false);
+  const [newUsername, setNewUsername] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+
+  // State สำหรับ Modal ยืนยันการลบ
+  const [isConfirmDeleteModalOpen, setIsConfirmDeleteModalOpen] = useState(false);
+  const [deleteTargetType, setDeleteTargetType] = useState(null);
 
   // State สำหรับเพจ (History)
   const [page, setPage] = useState(1);
@@ -17,7 +28,7 @@ export default function SettingsPage() {
   const { data: historyData, isLoading: historyLoading, isError: historyError } = useQuery({
     queryKey: ["activityLogs", page],
     queryFn: () => getActivityLogs(page),
-    enabled: activeTab === "history" && isSuperuser,
+    enabled: activeTab === "history" && hasLogAccess,
   });
 
   // ดึงข้อมูลด้วย useQuery สำหรับ Users
@@ -31,11 +42,11 @@ export default function SettingsPage() {
   const togglePermissionMutation = useMutation({
     mutationFn: ({ userId, data }) => updateUserPermission(userId, data),
     onSuccess: () => {
-      toast.success("อัปเดตสิทธิ์ผู้ใช้งานสำเร็จ!");
+      toast.success("User permissions updated successfully!");
       queryClient.invalidateQueries({ queryKey: ["users"] });
     },
     onError: (error) => {
-      toast.error("เกิดข้อผิดพลาดในการอัปเดตสิทธิ์");
+      toast.error("Error updating permissions.");
       console.error(error);
     },
   });
@@ -45,12 +56,33 @@ export default function SettingsPage() {
     onSuccess: (data) => {
       toast.success(data.message);
       queryClient.invalidateQueries({ queryKey: ["activityLogs", page] });
+      setIsConfirmDeleteModalOpen(false);
+      setDeleteTargetType(null);
     },
     onError: (error) => {
       toast.error(error.response?.data?.error || "Hard delete failed.");
       console.error(error);
+      setIsConfirmDeleteModalOpen(false);
+      setDeleteTargetType(null);
     }
   });
+
+  // Mutaion สำหรับสร้าง user ใหม่
+  const createUserMutation = useMutation({
+    mutationFn: createNewUser,
+    onSuccess: () => {
+      toast.success("User created successfully!");
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      setIsCreateUserModalOpen(false);
+      setNewUsername("");
+      setNewPassword("");
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.error || "Failed to create user.");
+      console.error(error);
+    }
+  });
+
 
   // ฟังก์ชันสำหรับ toggle permission
   const handleToggle = (userId, field, currentValue) => {
@@ -119,44 +151,48 @@ export default function SettingsPage() {
           </button>
 
           {isSuperuser && (
-            <>
-              <button
-                onClick={() => setActiveTab("users")}
-                className={cn(
-                  "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left",
-                  activeTab === "users"
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
-              >
-                <Users className="h-4 w-4" />
-                User Management
-              </button>
-              <button
-                onClick={() => setActiveTab("history")}
-                className={cn(
-                  "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left",
-                  activeTab === "history"
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
-              >
-                <History className="h-4 w-4" />
-                Activity History
-              </button>
-              <button
-                onClick={() => setActiveTab("danger")}
-                className={cn(
-                  "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left mt-4",
-                  activeTab === "danger"
-                    ? "bg-red-500/10 text-red-600"
-                    : "text-red-500/70 hover:bg-red-500/10 hover:text-red-600"
-                )}
-              >
-                <AlertTriangle className="h-4 w-4" />
-                Danger Zone
-              </button>
-            </>
+            <button
+              onClick={() => setActiveTab("users")}
+              className={cn(
+                "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left",
+                activeTab === "users"
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
+            >
+              <Users className="h-4 w-4" />
+              User Management
+            </button>
+          )}
+
+          {hasLogAccess && (
+            <button
+              onClick={() => setActiveTab("history")}
+              className={cn(
+                "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left",
+                activeTab === "history"
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
+            >
+              <History className="h-4 w-4" />
+              Activity History
+            </button>
+          )}
+
+          {isSuperuser && (
+            <button
+              onClick={() => setActiveTab("danger")}
+              className={cn(
+                "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left mt-4",
+                activeTab === "danger"
+                  ? "bg-red-500/10 text-red-600"
+                  : "text-red-500/70 hover:bg-red-500/10 hover:text-red-600"
+              )}
+            >
+              <AlertTriangle className="h-4 w-4" />
+              Danger Zone
+            </button>
           )}
         </div>
 
@@ -176,8 +212,17 @@ export default function SettingsPage() {
           {/* แท็บ User Management */}
           {activeTab === "users" && isSuperuser && (
             <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden flex flex-col">
-              <div className="px-5 py-4 border-b border-border bg-muted/20">
+              <div className="px-5 py-4 border-b border-border bg-muted/20 flex justify-between items-center">
                 <h2 className="font-semibold text-foreground">User Management</h2>
+
+                <button
+                  className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+                  disabled={createUserMutation.isPending}
+                  onClick={() => setIsCreateUserModalOpen(true)}
+                >
+                  + Add New User
+                </button>
+
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm table-auto">
@@ -215,7 +260,7 @@ export default function SettingsPage() {
           )}
 
           {/* แท็บ History */}
-          {activeTab === "history" && isSuperuser && (
+          {activeTab === "history" && hasLogAccess && (
             <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden flex flex-col">
               <div className="px-5 py-4 border-b border-border bg-muted/20">
                 <h2 className="font-semibold text-foreground">System Audit Log</h2>
@@ -325,9 +370,8 @@ export default function SettingsPage() {
                     <button
                       disabled={hardDeleteMutation.isPending}
                       onClick={() => {
-                        if (window.confirm("Are you completely sure? This action cannot be reversed!")) {
-                          hardDeleteMutation.mutate("products");
-                        }
+                        setDeleteTargetType("products");
+                        setIsConfirmDeleteModalOpen(true);
                       }}
                       className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-red-600 bg-red-100 rounded-md hover:bg-red-200 transition-colors disabled:opacity-50 whitespace-nowrap"
                     >
@@ -344,9 +388,8 @@ export default function SettingsPage() {
                     <button
                       disabled={hardDeleteMutation.isPending}
                       onClick={() => {
-                        if (window.confirm("Are you completely sure? This action cannot be reversed!")) {
-                          hardDeleteMutation.mutate("warehouses");
-                        }
+                        setDeleteTargetType("warehouses");
+                        setIsConfirmDeleteModalOpen(true);
                       }}
                       className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-red-600 bg-red-100 rounded-md hover:bg-red-200 transition-colors disabled:opacity-50 whitespace-nowrap"
                     >
@@ -359,6 +402,105 @@ export default function SettingsPage() {
           )}
         </div>
       </div>
+
+      {/* Create User Modal */}
+      {isCreateUserModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in">
+          <div className="bg-card w-full max-w-md rounded-xl shadow-lg border border-border overflow-hidden">
+            <div className="px-5 py-4 border-b border-border bg-muted/20">
+              <h2 className="font-semibold text-foreground">Create New User</h2>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Username</label>
+                <input
+                  type="text"
+                  value={newUsername}
+                  onChange={(e) => setNewUsername(e.target.value)}
+                  className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  placeholder="Enter username"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Password</label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  placeholder="Enter password"
+                />
+              </div>
+            </div>
+            <div className="px-5 py-4 border-t border-border flex justify-end gap-2 bg-muted/10">
+              <button
+                onClick={() => {
+                  setIsCreateUserModalOpen(false);
+                  setNewUsername("");
+                  setNewPassword("");
+                }}
+                disabled={createUserMutation.isPending}
+                className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (!newUsername || !newPassword) {
+                    toast.error("Please fill in both fields.");
+                    return;
+                  }
+                  createUserMutation.mutate({ username: newUsername, password: newPassword });
+                }}
+                disabled={createUserMutation.isPending}
+                className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+              >
+                {createUserMutation.isPending ? "Creating..." : "Create User"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {isConfirmDeleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in">
+          <div className="bg-card w-full max-w-md rounded-xl shadow-lg border border-red-500/30 overflow-hidden">
+            <div className="px-5 py-4 border-b border-red-500/30 bg-red-500/5">
+              <h2 className="font-semibold text-red-600 flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5" /> Confirm Deletion
+              </h2>
+            </div>
+            <div className="p-5 space-y-4 text-center">
+              <p className="text-sm text-foreground">
+                Are you completely sure you want to clear <strong>{deleteTargetType}</strong>?
+              </p>
+              <p className="text-sm text-muted-foreground">
+                This action cannot be reversed and all related soft-deleted data will be permanently wiped.
+              </p>
+            </div>
+            <div className="px-5 py-4 border-t border-border flex justify-end gap-2 bg-muted/10">
+              <button
+                onClick={() => {
+                  setIsConfirmDeleteModalOpen(false);
+                  setDeleteTargetType(null);
+                }}
+                disabled={hardDeleteMutation.isPending}
+                className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => hardDeleteMutation.mutate(deleteTargetType)}
+                disabled={hardDeleteMutation.isPending}
+                className="bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {hardDeleteMutation.isPending ? "Deleting..." : "Yes, Delete permanently"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

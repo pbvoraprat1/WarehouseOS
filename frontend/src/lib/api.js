@@ -69,6 +69,19 @@ export const createStockMovement = async (data) => {
     }
 };
 
+// ดึงยอดคงเหลือของสินค้าในคลังที่ระบุ
+export const getStockBalance = async (productId, warehouseId) => {
+    try {
+        const response = await api.get(`/warehouse/products/${productId}/${warehouseId}/`);
+        return response.data;
+    } catch (error) {
+        if (error.response?.status === 404) {
+            return { quantity: 0 };
+        }
+        throw error;
+    }
+};
+
 // อัปเดตข้อมูลคลัง
 export const UpdateWarehouse = async ({ id, payload }) => {
     const response = await api.put(`/warehouse/list/${id}/`, payload);
@@ -116,5 +129,11 @@ export const getDashboardData = async (warehouseId) => {
 // สำหรับ Login ขอ Token
 export const loginUser = async (credentials) => {
     const response = await api.post('/api/token/', credentials);
+    return response.data;
+};
+
+// สำหรับ สร้าง User ใหม่
+export const createNewUser = async (userData) => {
+    const response = await api.post('/warehouse/users/', userData);
     return response.data;
 };
