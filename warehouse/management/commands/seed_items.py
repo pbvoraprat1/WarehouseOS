@@ -54,8 +54,7 @@ class Command(BaseCommand):
                 # บันทึก Activity Log ว่า Admin เป็นคนทำ
                 ActivityLog.objects.create(
                     user=admin_user,
-                    action=f"Created product {new_product.name} (SKU: {new_product.sku})",
-                    ip_address="127.0.0.1"
+                    action=f"Created product {new_product.name} (SKU: {new_product.sku})"
                 )
                 created_count += 1
                 
