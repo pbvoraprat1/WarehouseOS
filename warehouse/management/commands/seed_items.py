@@ -2,7 +2,7 @@ import random
 import string
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
-from .models import Warehouse, Product, Transaction, Category
+from warehouse.models import Warehouse, Product, Transaction, Category
 
 class Command(BaseCommand):
     help = 'Seed the database with sample data'
