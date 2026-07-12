@@ -203,7 +203,7 @@ python manage.py createsuperuser
 Run the following command to generate 150 sample products:
 
 ```bash
-python manage.py seed_products
+python manage.py seed_items
 ```
 
 ### 📌 Notes
