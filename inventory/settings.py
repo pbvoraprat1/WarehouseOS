@@ -27,9 +27,12 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-2^edq()n0&gec@f6vhj4tk(2j+ef8(c@s9e(fcn56f(hyiyig(')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# ถ้าใน Docker Compose ส่ง DEBUG=0 มา ค่านี้จะเป็น False ทันที
+DEBUG = os.environ.get('DEBUG', '1') == '1'
 
-ALLOWED_HOSTS = []
+# ดึงค่า ALLOWED_HOSTS จาก .env ถ้าไม่มีให้รับทุกโดเมน ('*') เพื่อให้ใช้ IP เข้าได้
+allowed_hosts_env = os.environ.get('ALLOWED_HOSTS', '*')
+ALLOWED_HOSTS = allowed_hosts_env.split(',') if allowed_hosts_env else []
 
 
 # Application definition
@@ -129,7 +132,9 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
-CORS_ALLOW_ALL_ORIGINS = False
+# อนุญาตให้ Frontend จาก IP หรือโดเมนใดๆ ก็ได้สามารถเชื่อมต่อ API ได้ 
+# (แก้ปัญหา CORS Error ตอนเข้าผ่าน IP ของ Droplet)
+CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:8080",
     "http://localhost:8000",
