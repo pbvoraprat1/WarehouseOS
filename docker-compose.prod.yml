@@ -35,6 +35,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.prod
+      args:
+        VITE_API_BASE_URL: http://159.89.200.8
     restart: always
     depends_on:
       - backend
