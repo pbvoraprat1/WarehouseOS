@@ -27,10 +27,9 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-2^edq()n0&gec@f6vhj4tk(2j+ef8(c@s9e(fcn56f(hyiyig(')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-# ถ้าใน Docker Compose ส่ง DEBUG=0 มา ค่านี้จะเป็น False ทันที
 DEBUG = os.environ.get('DEBUG', '1') == '1'
 
-# ดึงค่า ALLOWED_HOSTS จาก .env ถ้าไม่มีให้รับทุกโดเมน ('*') เพื่อให้ใช้ IP เข้าได้
+# ALLOWED_HOSTS ใช้ค่าจาก .env (ถ้าไม่มีให้ใช้ '*')
 allowed_hosts_env = os.environ.get('ALLOWED_HOSTS', '*')
 ALLOWED_HOSTS = allowed_hosts_env.split(',') if allowed_hosts_env else []
 
@@ -52,13 +51,13 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
 ]
 
 ROOT_URLCONF = 'inventory.urls'
@@ -80,10 +79,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'inventory.wsgi.application'
 
-
 # Database
-# https://docs.djangoproject.com/en/6.0/ref/settings/#databases
-
 
 DATABASES = {
     'default': {
@@ -96,9 +92,7 @@ DATABASES = {
     }
 }
 
-
 # Password validation
-# https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -115,9 +109,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
-# https://docs.djangoproject.com/en/6.0/topics/i18n/
 
 LANGUAGE_CODE = 'en-us'
 
@@ -127,18 +119,16 @@ USE_I18N = True
 
 USE_TZ = True
 
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/6.0/howto/static-files/
-
+# Static Files
 STATIC_URL = 'static/'
-# อนุญาตให้ Frontend จาก IP หรือโดเมนใดๆ ก็ได้สามารถเชื่อมต่อ API ได้ 
-# (แก้ปัญหา CORS Error ตอนเข้าผ่าน IP ของ Droplet)
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# Media Files
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# CORS Settings
 CORS_ALLOW_ALL_ORIGINS = True
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:8080",
-    "http://localhost:8000",
-]
 
 # REST & JWT
 REST_FRAMEWORK = {
@@ -149,7 +139,6 @@ REST_FRAMEWORK = {
     'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE' : 10
 }
-
 
 from datetime import timedelta
 SIMPLE_JWT = {
