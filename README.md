@@ -184,6 +184,41 @@ http://localhost:5173
 
 ---
 
+## 🌱 Data Seeding
+
+This project includes a custom Django management command that automatically generates **150 mock products** for testing purposes. It is designed to simplify UI testing, search functionality, and pagination during development.
+
+### ⚠️ Prerequisites
+
+The seeding process requires at least one administrator account because all generated products are linked to an existing admin user and recorded in the `ActivityLog`.
+
+Make sure you have created a superuser before running the command.
+
+```bash
+python manage.py createsuperuser
+```
+
+### 🚀 Generate Mock Data
+
+Run the following command to generate 150 sample products:
+
+```bash
+python manage.py seed_items
+```
+
+### 📌 Notes
+
+- Generates **150 random products**.
+- Automatically assigns a warehouse and category.
+- Records all actions in the activity log.
+- Useful for testing:
+  - Search functionality
+  - Pagination
+  - Inventory management pages
+  - Dashboard statistics
+
+---
+
 ## 📷 Screenshots
 
 ### Dashboard
