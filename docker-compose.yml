@@ -34,7 +34,7 @@ services:
       - /app/node_modules
     environment:
       - CHOKIDAR_USEPOLLING=true
-      - VITE_API_BASE_URL=http://159.89.200.8
+      - VITE_API_BASE_URL=http://warehouseos.duckdns.org
     depends_on:
       - backend
 
