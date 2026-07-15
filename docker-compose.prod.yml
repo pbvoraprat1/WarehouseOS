@@ -37,7 +37,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile.prod
       args:
-        VITE_API_BASE_URL: http://warehouseos.duckdns.org
+        VITE_API_BASE_URL: https://warehouseos.duckdns.org
     restart: always
     depends_on:
       - backend
