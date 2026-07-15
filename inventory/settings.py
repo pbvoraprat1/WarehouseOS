@@ -33,6 +33,10 @@ DEBUG = os.environ.get('DEBUG', '1') == '1'
 allowed_hosts_env = os.environ.get('ALLOWED_HOSTS', '*')
 ALLOWED_HOSTS = allowed_hosts_env.split(',') if allowed_hosts_env else []
 
+# Reverse Proxy Security Settings
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+CSRF_TRUSTED_ORIGINS = ['https://warehouseos.duckdns.org']
+
 
 # Application definition
 
