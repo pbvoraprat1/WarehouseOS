@@ -127,8 +127,16 @@ Business Logic
 
 ### Infrastructure
 
+- DigitalOcean Droplet
+- Ubuntu Server
 - Docker
 - Docker Compose
+- Nginx (Reverse Proxy)
+- Certbot (HTTPS / SSL)
+
+### CI/CD
+
+- GitHub Actions *(In Progress)*
 
 ### Testing
 
@@ -143,22 +151,22 @@ Business Logic
 
 ## 📁 Project Structure
 
-```
+```text
 WarehouseOS
 │
-├── backend
-│     ├── apps
-│     ├── config
-│     ├── requirements.txt
-│     └── Dockerfile
+├── frontend/              # React + Vite frontend application
 │
-├── frontend
-│     ├── src
-│     ├── components
-│     ├── pages
-│     └── Dockerfile
+├── inventory/             # Django project configuration
 │
-├── docker-compose.yml
+├── warehouse/             # Core business logic
+│     ├── models.py
+│     ├── views.py
+│     ├── serializers.py
+│
+├── nginx.conf             # Nginx reverse proxy
+├── Dockerfile             # Backend container
+├── docker-compose.yml     # Development environment
+├── docker-compose.prod.yml
 └── README.md
 ```
 
@@ -169,6 +177,28 @@ WarehouseOS
 ```bash
 docker compose up --build
 ```
+
+---
+
+## 🌐 Deployment
+
+The application is deployed using Docker containers behind an Nginx reverse proxy with HTTPS enabled via Certbot.
+
+### Deployment Stack
+
+- Docker & Docker Compose
+- Nginx Reverse Proxy
+- SSL/TLS Certificates (Let's Encrypt + Certbot)
+- Linux Server
+
+### Features
+
+- HTTPS support
+- Automatic SSL certificate renewal
+- Reverse proxy configuration
+- Environment variable management
+
+---
 
 Backend
 
@@ -256,6 +286,8 @@ The main goals were to learn
 - Authorization
 - Transaction Management
 - Docker
+- nginx
+- CICD
 - PostgreSQL
 - React Query
 - Full-stack Architecture
@@ -266,12 +298,23 @@ while following patterns commonly used in production applications.
 
 ## 🔮 Roadmap
 
+### ✅ Completed
+
 - [x] JWT Authentication
 - [x] Role-Based Permissions
 - [x] Warehouse CRUD
 - [x] Inventory Movement
 - [x] User Management
 - [x] Docker Support
+- [x] Nginx Reverse Proxy
+- [x] HTTPS with Certbot
+
+### 🚧 In Progress
+
+- [ ] GitHub Actions (CI/CD)
+
+### 📌 Future Features
+
 - [ ] Redis + Celery
 - [ ] Notification System
 - [ ] Unit Testing
