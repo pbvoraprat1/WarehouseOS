@@ -1,0 +1,71 @@
+name : CICD CI/CD Pipeline for WarehouseOS to DigitalOcean
+
+on:
+  push:
+    branches:
+      - main
+
+#Test Backend
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+        
+      - name: Install Backend Dependencies
+        run : |
+          cd backend
+          pip install -r requirements.txt
+      
+      - name: Run Django Unit Tests
+        run: |
+          cd backend
+          python manage.py test
+
+#Test Frontend
+
+  test-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+      
+      - name: Install Frontend Dependencies
+        run: |
+          cd frontend
+          npm install
+
+      - name: Run frontend Tests (Vitest)
+        run: |
+          cd frontend
+          npm test
+
+#Deploy to DigitalOcean
+  deploy:
+    needs: [test-backend, test-frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to Droplet via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DROPLET_IP }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_KEY }}
+          script: |
+            cd ~/WarehouseOS
+            git pull origin main
+            docker compose -f docker-compose.prod.yml build
+            docker compose -f docker-compose.prod.yml up -d
+            docker image prune -f
