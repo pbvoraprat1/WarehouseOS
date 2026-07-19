@@ -136,11 +136,12 @@ Business Logic
 
 ### CI/CD
 
-- GitHub Actions *(In Progress)*
+- GitHub Actions (Build, Test, Push to GHCR, Auto-Deploy)
 
 ### Testing
 
-- Vitest *(Coming Soon)*
+- Django Unit Tests (Backend)
+- Vitest (Frontend)
 
 ### Background Tasks
 
@@ -182,14 +183,23 @@ docker compose up --build
 
 ## 🌐 Deployment
 
-The application is deployed using Docker containers behind an Nginx reverse proxy with HTTPS enabled via Certbot.
+**Live Demo:** https://warehouseos.duckdns.org
+
+The application is deployed using a fully automated CI/CD pipeline via GitHub Actions:
+
+1. Push to `main` triggers backend & frontend test suites
+2. On success, Docker images are built and pushed to GitHub Container Registry (GHCR)
+3. GitHub Actions connects to the DigitalOcean Droplet via SSH and pulls the latest images
+4. Zero-downtime container swap via Docker Compose
 
 ### Deployment Stack
 
+- GitHub Actions (CI/CD)
+- GitHub Container Registry (GHCR)
 - Docker & Docker Compose
 - Nginx Reverse Proxy
 - SSL/TLS Certificates (Let's Encrypt + Certbot)
-- Linux Server
+- DigitalOcean Droplet
 
 ### Features
 
@@ -308,10 +318,7 @@ while following patterns commonly used in production applications.
 - [x] Docker Support
 - [x] Nginx Reverse Proxy
 - [x] HTTPS with Certbot
-
-### 🚧 In Progress
-
-- [ ] GitHub Actions (CI/CD)
+- [x] GitHub Actions (CI/CD)
 
 ### 📌 Future Features
 
