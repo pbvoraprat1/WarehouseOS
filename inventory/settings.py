@@ -32,6 +32,8 @@ DEBUG = os.environ.get('DEBUG', '1') == '1'
 # ALLOWED_HOSTS ใช้ค่าจาก .env (ถ้าไม่มีให้ใช้ '*')
 allowed_hosts_env = os.environ.get('ALLOWED_HOSTS', '*')
 ALLOWED_HOSTS = allowed_hosts_env.split(',') if allowed_hosts_env else []
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
 
 # Reverse Proxy Security Settings
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')

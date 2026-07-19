@@ -20,14 +20,10 @@ jobs:
           python-version: '3.13'
         
       - name: Install Backend Dependencies
-        run : |
-          cd backend
-          pip install -r requirements.txt
+        run : pip install -r requirements.txt
       
       - name: Run Django Unit Tests
-        run: |
-          cd backend
-          python manage.py test
+        run: python manage.py test
 
 #Test Frontend
 

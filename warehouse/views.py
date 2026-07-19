@@ -61,7 +61,7 @@ class ProductListAPIView(generics.ListCreateAPIView):
 #รายละเอียดสินค้าและแก้ไขข้อมูลสินค้า(เช่น ชื่อ, หมวดหมู่, ราคาต้นทุน) และลบสินค้า(ทำให้ is_active = False)
 class ProductDetailAPIView(APIView):
     #เช็คสิทธการเข้าถึง
-    def get (self):
+    def get_permissions(self):
         if self.request.method in ['PUT' , 'DELETE', 'PATCH']:
             return [IsAdminUser()]
         return [IsAuthenticated()]
