@@ -12,9 +12,7 @@ services:
     restart: always
 
   backend:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/pbvoraprat1/warehouseos-backend:latest
     env_file:
       - .env
     environment:
@@ -33,11 +31,7 @@ services:
       - media_volume:/app/media
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile.prod
-      args:
-        VITE_API_BASE_URL: https://warehouseos.duckdns.org
+    image: ghcr.io/pbvoraprat1/warehouseos-frontend:latest
     restart: always
     depends_on:
       - backend

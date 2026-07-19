@@ -69,6 +69,44 @@ jobs:
         run: |
           cd frontend
           npm test
+  build-and-push:
+    needs: [test-backend, test-frontend]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    step:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GITHUB_ACTOR }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Setup docker buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build & Push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: ghcr.io/pbvoraprat1/warehouseos-backend:latest
+      
+      - name: Build & Push frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: Dockerfile
+          push: true
+          tags: ghcr.io/pbvoraprat1/warehouseos-frontend:latest
+          buildargs: |
+            VITE_API_BASE_URL=https://warehouseos.duckdns.org
+          cache-from: type=gha
+          cache-to: type=gha,mode=max   
 
 #Deploy to DigitalOcean
   deploy:
@@ -84,6 +122,7 @@ jobs:
           script: |
             cd ~/WarehouseOS
             git pull origin main
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u pbvoraprat1 --password-stdin
             docker compose -f docker-compose.prod.yml build
             docker compose -f docker-compose.prod.yml up -d
             docker image prune -f
