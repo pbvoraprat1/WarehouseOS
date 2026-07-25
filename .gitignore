@@ -20,3 +20,9 @@ Thumbs.db
 
 #โฟลเดอร์เก็บรูปภาพหรือไฟล์ที่ User อัปโหลด
 media/
+
+# Node & Frontend Build
+node_modules/
+frontend/dist/
+dist/
+.vite/
