@@ -263,25 +263,39 @@ python manage.py seed_items
 
 ### Dashboard
 
-(Add Screenshot)
+<p align="center">
+  <img src=".github/assets/Dashboard.gif" alt="WarehouseOS Dashboard" />
+</p>
 
 ---
 
 ### Product Management
 
-(Add Screenshot)
+<p align="center">
+  <img src=".github/assets/Product-Management.gif" alt="Product Management" />
+</p>
 
 ---
+### Stock Movements
 
+<p align="center">
+  <img src=".github/assets/Stock-Movement.gif" alt="Stock Movement" />
+</p>
+
+---
 ### Warehouse Management
 
-(Add Screenshot)
+<p align="center">
+  <img src=".github/assets/Warehouse.gif" alt="Warehouse" />
+</p>
 
 ---
 
 ### User Management
 
-(Add Screenshot)
+<p align="center">
+  <img src=".github/assets/User-Management.gif" alt="User Management" />
+</p>
 
 ---
 
@@ -336,8 +350,4 @@ while following patterns commonly used in production applications.
 
 ## 👨‍💻 Author
 
-**Voraprat Pringplang**
-
-GitHub
-
-https://github.com/pbvoraprat1
+**Voraprat Pringplang** - [@pbvoraprat1](https://github.com/pbvoraprat1)
