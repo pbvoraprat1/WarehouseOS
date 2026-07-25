@@ -350,5 +350,5 @@ while following patterns commonly used in production applications.
 
 ## 👨‍💻 Author
 
-Github
-**Voraprat Pringplang** - [@pbvoraprat1](https://github.com/pbvoraprat1)
+**Github**
+[@pbvoraprat1](https://github.com/pbvoraprat1)
