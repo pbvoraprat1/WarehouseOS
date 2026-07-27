@@ -184,7 +184,7 @@ docker compose up --build
 ## 🌐 Deployment
 
 **Live Demo:** https://warehouseos.duckdns.org
-Demo account : test / test
+Demo account : test / test (Staff) | admin / admin (Admin)
 
 The application is deployed using a fully automated CI/CD pipeline via GitHub Actions:
 
